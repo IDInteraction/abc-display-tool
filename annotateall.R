@@ -28,7 +28,7 @@ objectdir <- checkpath(options[4])
 
 videofiles <- list.files(inputdir, pattern = "P\\d+_video.mp4$")
 
-for(v in videofiles[1]){
+for(v in videofiles){
   rootname <- str_extract(v, "(P\\d+)")
   outname <- paste0(rootname, "_bboxes.avi")
   facename <- paste0("pface", rootname, ".csv")
@@ -41,7 +41,7 @@ for(v in videofiles[1]){
                 facedir, facename, " ",
                 objectdir, objectname
   )
-  #print(cmd)
+  print(cmd)
   system(cmd)
   
   
