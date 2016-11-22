@@ -31,13 +31,14 @@ for infile in sys.argv[3:]:
     fileind = fileind + 1
 
 
-##for bbk in bbox_collection.keys():
-##    print bbox_collection[bbk].index
-##
-##quit()
+#for bbk in bbox_collection.keys():
+    #print bbox_collection[bbk].index
+#    print bbox_collection[bbk]
+
+#quit()
 
 
-WINDOW_NAME = 'Playback'
+#WINDOW_NAME = 'Playback'
 
 video = cv2.VideoCapture(sys.argv[1])
 
@@ -47,7 +48,7 @@ oh = int(video.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
 
 fourcc = cv2.cv.CV_FOURCC('X','V','I','D')
 videoout = cv2.VideoWriter(sys.argv[2], fourcc, fps,  (ow, oh))
-cv2.namedWindow(WINDOW_NAME)
+#cv2.namedWindow(WINDOW_NAME)
 
 frame = 1
 got, img = video.read()
