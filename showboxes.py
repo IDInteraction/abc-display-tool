@@ -29,7 +29,14 @@ for infile in sys.argv[3:]:
 
     # Determine whether we have a prediction column
 
+    print(os.path.getsize(infile))
+    if(os.path.getsize(infile) ==0):
+        print(infile + " is size 0; skipping")
+        break
+
+
     with open(infile) as f:
+        print("reading file "  + infile)
         reader = csv.reader(f, delimiter=',', skipinitialspace=True)
         first_row = next(reader)
         num_cols = len(first_row)
