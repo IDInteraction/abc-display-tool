@@ -11,10 +11,19 @@ import itertools
 
 bbox_collection = {}
 
-colours =np.array([(255,0,0),
+colours=[(255,0,0),
            (0,255,0),
            (0,0,255),
-           (255,255,255)])
+           (255,255,255)]
+
+def scaleColour(oldTuple, scalefact):
+    if scalefact == 1: # pre predictions - make almost black
+        scalefact = 0.2
+    else:
+        scalefact = 1/(scalefact - 1) # leave 2 unchanged, half brightness for 2
+
+    return tuple(x * scalefact for x in oldTuple)
+
 
 col_names = ["Frame", "time", "actpt", "bbcx", "bbcy",
          "bbw", "bbh", "bbr",
@@ -99,8 +108,13 @@ while got:
                 p1 = (actbb[n].astype(int), actbb[n+1].astype(int))
                 p2 = (actbb[m].astype(int), actbb[m+1].astype(int))
                 cv2.line(img, p1, p2, \
-                color = colours[bbk], \
-                thickness = actbb["pred"].astype(int))
+                color = scaleColour(colours[bbk], actbb["pred"].astype(float)),  \
+                thickness = 2)
+
+                lineno = 0
+            for infile in sys.argv[3:]:
+                cv2.putText(img, infile, (20, 20 + lineno * 18), cv2.cv.CV_FONT_HERSHEY_DUPLEX, 0.5, colours[lineno], 1)
+                lineno = lineno + 1
 
 
    # cv2.imshow(WINDOW_NAME, img)
