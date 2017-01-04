@@ -24,19 +24,39 @@ def scaleColour(oldTuple, scalefact):
 
     return tuple(x * scalefact for x in oldTuple)
 
+def convertToWide(indata, fps=50):
+    # Convert narrow (frame, x,y,w,h) data to wide format
+    # i.e. each vertex specified
+    indata['bb1x'] = indata['bbx']
+    indata['bb1y'] = indata['bby'] + indata['bbh']
+    indata['bb2x'] = indata['bbx']
+    indata['bb2y'] = indata['bby']
+    indata['bb3x'] = indata['bbx'] + indata['bbw']
+    indata['bb3y'] = indata['bby']
+    indata['bb4x'] = indata['bbx'] + indata['bbw']
+    indata['bb4y'] = indata['bby'] + indata['bbh']
 
-col_names = ["Frame", "time", "actpt", "bbcx", "bbcy",
+    indata['bbr'] = 0
+
+    indata['bbcx'] = indata['bbx'] + indata['bbw'] / 2
+    indata['bbcy'] = indata['bby'] + indata['bbh'] / 2
+
+    indata.drop(['bbx','bby'], axis=1, inplace=True)
+
+    return indata
+
+
+fullformat_names = ["Frame", "time", "actpt", "bbcx", "bbcy",
          "bbw", "bbh", "bbr",
          "bb1x", "bb1y",
          "bb2x", "bb2y",
          "bb3x", "bb3y",
          "bb4x", "bb4y", "pred"]
 
+narrowformat_names = ["Frame", "bbx", "bby", "bbw", "bbh", "pred"]
 
 fileind = 0
 for infile in sys.argv[3:]:
-
-    # Determine whether we have a prediction column
 
     print(os.path.getsize(infile))
     if(os.path.getsize(infile) ==0):
@@ -50,24 +70,38 @@ for infile in sys.argv[3:]:
         first_row = next(reader)
         num_cols = len(first_row)
 
-    if(num_cols == 17):
+    print str(num_cols) + " columns in file"
+    # TODO deal with csv files with row numbers; will throw off prediction test
+    if(num_cols == 17 or num_cols == 6):
         print("have predictions")
-    elif(num_cols ==16):
+
+    elif(num_cols ==16 or num_cols == 5):
         print("no predictions")
     else:
         print("Unknown input format")
         quit()
 
-    bbox_collection[fileind]=pd.read_csv(infile, sep = ",", header = 0, index_col = 0,
+    if(num_cols == 16 or num_cols ==17):
+        print("Reading wide data")
+        bbox_collection[fileind]=pd.read_csv(infile, sep = ",", header = 0, index_col = 0,
+                   dtype = {'Frame':np.int32},
+                   names = fullformat_names[:num_cols])
+
+    else:
+        print("Reading narrow data")
+        narrowdata=pd.read_csv(infile, sep = ",", header = None, index_col = 0,
                dtype = {'Frame':np.int32},
-               names = col_names[:num_cols])
+               names = narrowformat_names[:num_cols])
+        bbox_collection[fileind]=convertToWide(narrowdata)
 
-
-    if(num_cols == 16):
+    # Add dummy prediction column if it doesn't exist
+    if 'pred' not in bbox_collection[fileind]:
         print("Adding dummy pred column for " + infile)
         bbox_collection[fileind]["pred"] = 1
 
     fileind = fileind + 1
+
+
 
 #for bbk in bbox_collection.keys():
     #print bbox_collection[bbk].index
@@ -99,17 +133,14 @@ while got:
             actbb = bbox_collection[bbk].loc[frame]
 
             #Need to draw rectangle as four lines, since may not have rotation = 0
-            #cv2.rectangle(img, (actbb['bb1x'].astype(int), actbb['bb1y'].astype(int)),
-            #          (actbb['bb3x'].astype(int), actbb['bb3y'].astype(int)),colours[bbk], 2)
-            # From Rob's code (note column 0 is used as the index)
-            for i in xrange(4):
-                n = (i + 4) * 2 - 1
-                m = (((i + 1) % 4) + 4) * 2 -1
-                p1 = (actbb[n].astype(int), actbb[n+1].astype(int))
-                p2 = (actbb[m].astype(int), actbb[m+1].astype(int))
-                cv2.line(img, p1, p2, \
-                color = scaleColour(colours[bbk], actbb["pred"].astype(float)),  \
-                thickness = 2)
+            for i in range(1,5):
+                j = (i % 4) + 1
+                p1 = (actbb['bb' + str(i) + 'x'], actbb['bb' + str(i) + 'y'])
+                p2 = (actbb['bb' + str(j) + 'x'], actbb['bb' + str(j) + 'y'])
+                p1 = tuple(map(int, p1))
+                p2 = tuple(map(int, p2))
+                cv2.line(img, p1, p2,  color = scaleColour(colours[bbk], actbb["pred"].astype(float)),  \
+                     thickness = 2)
 
                 lineno = 0
             for infile in sys.argv[3:]:
@@ -121,8 +152,8 @@ while got:
     videoout.write(img)
 
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+    # if cv2.waitKey(1) & 0xFF == ord('q'):
+    #     break
 
     got, img = video.read()
     frame = frame + 1
