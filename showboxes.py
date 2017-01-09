@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import itertools
 import re
+import colorsys
 
 # inputvideo
 # output video
@@ -15,10 +16,11 @@ import re
 
 bbox_collection = {}
 
-colours=[(255,0,0),
-           (0,255,0),
-           (0,0,255),
-           (255,255,255)]
+# http://stackoverflow.com/questions/876853/generating-color-ranges-in-python
+Nfiles = len(sys.argv) - 2
+HSV_tuples = [(x*1.0/Nfiles, 0.5, 0.5) for x in range(Nfiles)]
+colours = map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples)
+
 
 def scaleColour(oldTuple, scalefact):
     if scalefact == 1: # pre predictions - make almost black
@@ -170,7 +172,7 @@ while got:
 
     # if cv2.waitKey(1) & 0xFF == ord('q'):
     #     break
-
+    sys.stdout.write("                 \r" + str(frame))
     got, img = video.read()
     frame = frame + 1
 
