@@ -7,7 +7,11 @@ import sys
 import numpy as np
 import pandas as pd
 import itertools
+import re
 
+# inputvideo
+# output video
+# inputcsv arg 3+
 
 bbox_collection = {}
 
@@ -54,6 +58,16 @@ fullformat_names = ["Frame", "time", "actpt", "bbcx", "bbcy",
          "bb4x", "bb4y", "pred"]
 
 narrowformat_names = ["Frame", "bbx", "bby", "bbw", "bbh", "pred"]
+
+# Check we're trying to read/write something at least called an mp4 or avi
+
+vidFileRegex = r"(\w+)\.(avi|mp4)$"
+
+if not(re.search(vidFileRegex, sys.argv[1]) and \
+        re.search(vidFileRegex, sys.argv[2])):
+    print("Invalid input and/or output file format")
+    quit()
+
 
 fileind = 0
 for infile in sys.argv[3:]:
@@ -117,6 +131,8 @@ video = cv2.VideoCapture(sys.argv[1])
 fps = video.get(cv2.cv.CV_CAP_PROP_FPS)
 ow = int(video.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
 oh = int(video.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
+
+
 
 fourcc = cv2.cv.CV_FOURCC('X','V','I','D')
 videoout = cv2.VideoWriter(sys.argv[2], fourcc, fps,  (ow, oh))
