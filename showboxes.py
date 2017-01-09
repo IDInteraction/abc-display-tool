@@ -10,6 +10,7 @@ import itertools
 import re
 import colorsys
 
+
 # inputvideo
 # output video
 # inputcsv arg 3+
@@ -17,16 +18,22 @@ import colorsys
 bbox_collection = {}
 
 # http://stackoverflow.com/questions/876853/generating-color-ranges-in-python
-Nfiles = len(sys.argv) - 2
+Nfiles = len(sys.argv) - 3
 HSV_tuples = [(x*1.0/Nfiles, 0.5, 0.5) for x in range(Nfiles)]
 colours = map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples)
+# Must be a bettter way of doing this - scale each colour
+ind = 0
+for c in colours:
+    colours[ind] = tuple(x*255 for  x in c)
+    ind = ind + 1
 
 
 def scaleColour(oldTuple, scalefact):
-    if scalefact == 1: # pre predictions - make almost black
-        scalefact = 0.2
-    else:
-        scalefact = 1/(scalefact - 1) # leave 2 unchanged, half brightness for 2
+    # scalefact pre-calculated
+    # if scalefact == 1: # pre predictions - make almost black
+    #     scalefact = 0.2
+    # else:
+    #     scalefact = 1/(scalefact - 1) # leave 2 unchanged, half brightness for 2
 
     return tuple(x * scalefact for x in oldTuple)
 
@@ -115,6 +122,21 @@ for infile in sys.argv[3:]:
         print("Adding dummy pred column for " + infile)
         bbox_collection[fileind]["pred"] = 1
 
+    # Recode predicions to give sensible colour intensity ranges
+    # Want full brightness if pred is the same for all frameskip
+    maxclass = max(bbox_collection[fileind]["pred"])
+    minclass = min(bbox_collection[fileind]["pred"])
+    if maxclass == minclass:
+        bbox_collection[fileind]["colourscale"] = 1.0
+    else:
+        numclasses= maxclass - minclass
+        bbox_collection[fileind]["colourscale"] = bbox_collection[fileind]["pred"]/numclasses
+        if(min(bbox_collection[fileind]["colourscale"]) < 0 or \
+            max(bbox_collection[fileind]["colourscale"]) > 1):
+            print("Colour scaling went wrong; check numbering of preciction classes")
+            quit()
+
+
     fileind = fileind + 1
 
 
@@ -144,10 +166,17 @@ frame = 1
 got, img = video.read()
 
 while got:
+    sys.stdout.write("                      \r" + str(frame))
+
+    lineno = 0
+    for infile in sys.argv[3:]:
+        cv2.putText(img, infile, (20, 20 + lineno * 18), cv2.cv.CV_FONT_HERSHEY_DUPLEX, 0.5, colours[lineno], 2)
+        lineno = lineno + 1
+
 
     for bbk in bbox_collection.keys():
         if frame in bbox_collection[bbk].index:
-            print frame, bbk
+            sys.stdout.write(" " +  str(bbk))
             actbb = bbox_collection[bbk].loc[frame]
 
             #Need to draw rectangle as four lines, since may not have rotation = 0
@@ -157,13 +186,9 @@ while got:
                 p2 = (actbb['bb' + str(j) + 'x'], actbb['bb' + str(j) + 'y'])
                 p1 = tuple(map(int, p1))
                 p2 = tuple(map(int, p2))
-                cv2.line(img, p1, p2,  color = scaleColour(colours[bbk], actbb["pred"].astype(float)),  \
+                cv2.line(img, p1, p2,  color =scaleColour(colours[bbk], actbb["colourscale"]),  \
                      thickness = 2)
 
-                lineno = 0
-            for infile in sys.argv[3:]:
-                cv2.putText(img, infile, (20, 20 + lineno * 18), cv2.cv.CV_FONT_HERSHEY_DUPLEX, 0.5, colours[lineno], 1)
-                lineno = lineno + 1
 
 
    # cv2.imshow(WINDOW_NAME, img)
@@ -172,10 +197,10 @@ while got:
 
     # if cv2.waitKey(1) & 0xFF == ord('q'):
     #     break
-    sys.stdout.write("                 \r" + str(frame))
+
     got, img = video.read()
     frame = frame + 1
-
+sys.stdout.write("\n")
 video.release()
 videoout.release()
 cv2.destroyAllWindows()
