@@ -8,6 +8,8 @@ import argparse
 import cv2
 import re
 from random import shuffle
+from sklearn.tree import DecisionTreeClassifier 
+from sklearn import preprocessing
 
 # Need video file
 # Openface / cppmt data
@@ -21,16 +23,16 @@ from random import shuffle
 
 def loadTrackingData(infile,
         guessClean = True):
-    indata = pd.read_csv(infile)
+    indata = pd.read_csv(infile, index_col = 0)
     stripvals = [x.strip(' ') for x in indata.columns.values]
     indata.columns = stripvals
 
     if guessClean == True:
         # Remove spurious columns based on filetype
-        if set(['frame', 'timestamp', 'gaze_0_x']).issubset(indata.columns.values):
+        if set(['timestamp', 'gaze_0_x']).issubset(indata.columns.values):
             print("OpenFace input detected")
             AUCols = [x.find("AU") == 0 for x in indata.columns.values] 
-            ControlCols = [True] * 4 + [False] * (indata.columns.values.size - 4)
+            ControlCols = [True] * 3 + [False] * (indata.columns.values.size - 3)
             mask = [x|y for (x,y) in zip(AUCols, ControlCols)] 
 
             indata.drop(indata.columns[mask], axis = 1, inplace = True)
@@ -60,10 +62,10 @@ parser.add_argument("--videofile",
         dest = "videofile", type = str, required = True)
 parser.add_argument("--trackerfile",
         dest = "trackerfile", type = str, required = True)
-parser.add_argument("--startframe",
-        dest = "startframe", type = int, required = False)
+parser.add_argument("--startframe", type = int, required = False)
 parser.add_argument("--endframe",
         dest = "endframe", type = int, required = False)
+parser.add_argument("--minframes", type = int, required = True)
 
 args = parser.parse_args()
 
@@ -92,13 +94,34 @@ trackingData = loadTrackingData(args.trackerfile)
 trainingframes = range(startVideoFrame, endVideoFrame)
 shuffle(trainingframes)
 
-img = getVideoFrame(videoFile, trainingframes[0])
+trainedframes = 0
 
-cv2.imshow("image", img)
+groundtruth = [1,0,0,0,1,1,1,1,0,0]
 
-key =  cv2.waitKey(0) 
-print key
+tree = DecisionTreeClassifier()
+
+# for i in range(-1, args.minframes): 
+#     img = getVideoFrame(videoFile, trainingframes[i])
+# 
+#     cv1.imshow("image", img)
+# 
+#     key =  cv1.waitKey(0) 
+#     groundtruth.append(int(chr(key)))
+# 
+    
+trainedframes = len(groundtruth)
 
 
+trainingSet = trackingData.loc[trainingframes[0:trainedframes],:]
+
+tree.fit(trainingSet, groundtruth)
+
+print( tree)
+
+predictionSet = trackingData.loc[trainingframes[10:20],:] 
+
+predicted = tree.predict(predictionSet)
+
+print predicted
 
 
