@@ -84,7 +84,6 @@ parser.add_argument("--minframes", type = int, required = True)
 parser.add_argument("--extgt", type = str, required = False)
 args = parser.parse_args()
 
-
 cv2.namedWindow("Classification")
 videoFile = cv2.VideoCapture(args.videofile)
 
@@ -114,40 +113,53 @@ if args.extgt is not None:
     externalGT = loadExternalGroundTruth(args.extgt)
     
 
-trainedframes = 0
+trainedframescount = 0
 
 
 tree = DecisionTreeClassifier()
+groundtruth = []
 
-# for i in range(-1, args.minframes): 
-#     img = getVideoFrame(videoFile, trainingframes[i])
-# 
-#     cv1.imshow("image", img)
-# 
-#     key =  cv1.waitKey(0) 
-#     groundtruth.append(int(chr(key)))
-# 
+if args.extgt is None:
+    while trainedframescount < args.minframes:
+        img = getVideoFrame(videoFile, trainingframes[trainedframescount])
+ 
+        cv2.imshow("image", img)
+ 
+        key =  cv2.waitKey(0) 
+        groundtruth.append(int(chr(key)))
+        trainedframescount = trainedframescount + 1
 
-trainedframes = 100
-
-#groundtruth = [1,0,0,0,1,1,1,1,0,0]
-
-#trainedframes = len(groundtruth)
-
-
-trainingSet = trackingData.loc[trainingframes[0:trainedframes],:]
-groundtruth = externalGT.loc[trainingframes[0:trainedframes], "state"]
+else:
+    trainedframescount = int(raw_input("Enter training frames: "))
+    groundtruthDF = externalGT.loc[trainingframes[:trainedframescount],"state"]
+    groundtruth = list(groundtruthDF)
 
 
-tree.fit(trainingSet, groundtruth)
 
-print( tree)
 
-predictionSet = trackingData.loc[trainingframes[(trainedframes + 1):],:] 
+print "Using " + str(trainedframescount) + " frames for training and evaluation"
+
+truetrainingframes = trainingframes[0:trainedframescount / 2]
+evaluationtrainingframes = trainingframes[(trainedframescount / 2):trainedframescount ]
+
+
+trainingSet = trackingData.loc[truetrainingframes,:]
+
+traininggroundtruth = groundtruth[:trainedframescount / 2]
+
+
+tree.fit(trainingSet, traininggroundtruth)
+
+
+predictionSet = trackingData.loc[evaluationtrainingframes,:]
 
 
 predicted = tree.predict(predictionSet)
-expected = externalGT.loc[trainingframes[(trainedframes + 1):], "state"]
+
+expected = groundtruth[(trainedframescount / 2):]
+
+
+
 
 print(metrics.classification_report(expected, predicted))
 print(metrics.confusion_matrix(expected, predicted))
