@@ -157,11 +157,12 @@ ow = int(video.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
 oh = int(video.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
 
 
-
+print("Opening output vid")
 fourcc = cv2.cv.CV_FOURCC('X','V','I','D')
+#fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
 videoout = cv2.VideoWriter(sys.argv[2], fourcc, fps,  (ow, oh))
 #cv2.namedWindow(WINDOW_NAME)
-
+print("Output vid opened")
 frame = 1
 got, img = video.read()
 
