@@ -10,6 +10,7 @@ import re
 from random import shuffle
 from sklearn.tree import DecisionTreeClassifier 
 from sklearn import preprocessing
+from sklearn import metrics
 
 # Need video file
 # Openface / cppmt data
@@ -39,16 +40,30 @@ def loadTrackingData(infile,
 
     return indata
 
+def loadExternalGroundTruth(infile, format = "checkfile"):
+    if format != "checkfile":
+        print "Only checkfiles implemented"
+        quit()
+
+    indata = pd.read_csv(infile, index_col=0,
+            names = ["frame", "x", "y", "w", "h", "state"])
+
+    indata.drop(["x","y","w","h"], axis=1 ,inplace = True)
+
+    return indata
+
 
 def getVideoFrame(videosrc, frameNumber):
+    # Return the video frame from the video
+    # Pass in a **1 INDEXED** video frame number
     # http://stackoverflow.com/questions/11469281/getting-individual-frames-using-cv-cap-prop-pos-frames-in-cvsetcaptureproperty
     fps = videosrc.get(cv2.cv.CV_CAP_PROP_FPS)
-    frameTime = 1000 * frameNumber / fps
+    frameTime = 1000 * (frameNumber-1) / fps
     videosrc.set(cv2.cv.CV_CAP_PROP_POS_MSEC, frameTime)
 
     ret, img = videosrc.read()
     if ret == False:
-        print "Failed to capture frame" + str(fps)
+        print "Failed to capture frame" + str(frameNumber - 1)
         quit()
 
     return img
@@ -66,7 +81,7 @@ parser.add_argument("--startframe", type = int, required = False)
 parser.add_argument("--endframe",
         dest = "endframe", type = int, required = False)
 parser.add_argument("--minframes", type = int, required = True)
-
+parser.add_argument("--extgt", type = str, required = False)
 args = parser.parse_args()
 
 
@@ -94,9 +109,13 @@ trackingData = loadTrackingData(args.trackerfile)
 trainingframes = range(startVideoFrame, endVideoFrame)
 shuffle(trainingframes)
 
+if args.extgt is not None:
+    print "Loading external ground-truth file"
+    externalGT = loadExternalGroundTruth(args.extgt)
+    
+
 trainedframes = 0
 
-groundtruth = [1,0,0,0,1,1,1,1,0,0]
 
 tree = DecisionTreeClassifier()
 
@@ -108,20 +127,30 @@ tree = DecisionTreeClassifier()
 #     key =  cv1.waitKey(0) 
 #     groundtruth.append(int(chr(key)))
 # 
-    
-trainedframes = len(groundtruth)
+
+trainedframes = 100
+
+#groundtruth = [1,0,0,0,1,1,1,1,0,0]
+
+#trainedframes = len(groundtruth)
 
 
 trainingSet = trackingData.loc[trainingframes[0:trainedframes],:]
+groundtruth = externalGT.loc[trainingframes[0:trainedframes], "state"]
+
 
 tree.fit(trainingSet, groundtruth)
 
 print( tree)
 
-predictionSet = trackingData.loc[trainingframes[10:20],:] 
+predictionSet = trackingData.loc[trainingframes[(trainedframes + 1):],:] 
+
 
 predicted = tree.predict(predictionSet)
+expected = externalGT.loc[trainingframes[(trainedframes + 1):], "state"]
 
-print predicted
+print(metrics.classification_report(expected, predicted))
+print(metrics.confusion_matrix(expected, predicted))
+print(metrics.accuracy_score(expected, predicted))
 
 
