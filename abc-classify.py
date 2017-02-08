@@ -68,6 +68,36 @@ def getVideoFrame(videosrc, frameNumber):
 
     return img
 
+def runClassifier(groundtruth, trackingdata):
+
+
+    tree = DecisionTreeClassifier()
+
+    trainedframescount  = len(groundtruth)
+    if len(trackingdata.index) != trainedframescount:
+        print "Size mismatch"
+        quit()
+    print "Classifying + eval with " + str(trainedframescount) + " frames" 
+    trainingSet = trackingdata[0:(trainedframescount / 2)]
+
+    traininggroundtruth = groundtruth[:trainedframescount / 2]
+
+
+    tree.fit(trainingSet, traininggroundtruth)
+
+
+    predictionSet = trackingdata[(trainedframescount/2):]
+    expected = groundtruth[(trainedframescount / 2):]
+
+    predicted = tree.predict(predictionSet)
+    
+    print(metrics.classification_report(expected, predicted))
+    print(metrics.confusion_matrix(expected, predicted))
+    print(metrics.accuracy_score(expected, predicted))
+    
+
+
+
 
 
 
@@ -116,18 +146,20 @@ if args.extgt is not None:
 trainedframescount = 0
 
 
-tree = DecisionTreeClassifier()
 groundtruth = []
 
 if args.extgt is None:
     while trainedframescount < args.minframes:
         img = getVideoFrame(videoFile, trainingframes[trainedframescount])
  
-        cv2.imshow("image", img)
+        cv2.imshow("Classification", img)
  
         key =  cv2.waitKey(0) 
-        groundtruth.append(int(chr(key)))
-        trainedframescount = trainedframescount + 1
+        if(chr(key) == 'c'):
+            runClassifier(groundtruth, trackingData.loc[trainingframes[:trainedframescount]])
+        else:
+            groundtruth.append(int(chr(key)))
+            trainedframescount = trainedframescount + 1
 
 else:
     trainedframescount = int(raw_input("Enter training frames: "))
@@ -139,30 +171,9 @@ else:
 
 print "Using " + str(trainedframescount) + " frames for training and evaluation"
 
-truetrainingframes = trainingframes[0:trainedframescount / 2]
-evaluationtrainingframes = trainingframes[(trainedframescount / 2):trainedframescount ]
+
+runClassifier(groundtruth, trackingData.loc[trainingframes[:trainedframescount]])
 
 
-trainingSet = trackingData.loc[truetrainingframes,:]
-
-traininggroundtruth = groundtruth[:trainedframescount / 2]
-
-
-tree.fit(trainingSet, traininggroundtruth)
-
-
-predictionSet = trackingData.loc[evaluationtrainingframes,:]
-
-
-predicted = tree.predict(predictionSet)
-
-expected = groundtruth[(trainedframescount / 2):]
-
-
-
-
-print(metrics.classification_report(expected, predicted))
-print(metrics.confusion_matrix(expected, predicted))
-print(metrics.accuracy_score(expected, predicted))
 
 
