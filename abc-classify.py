@@ -223,7 +223,11 @@ if args.entergt:
                 if args.outfileexternalpreds is not None:
                     savePredictions(externalpreds,  trackingData,
                             trainingframes[trainedframescount:], args.outfileexternalpreds)
+        elif(chr(key) == 'q'):
+            print "Exiting"
+            sys.exit()
         else: # TODO: Implement undo
+            # TODO check numeric and trap
             groundtruth.append(int(chr(key)))
             trainedframescount = trainedframescount + 1
             if args.extgt is not None:
