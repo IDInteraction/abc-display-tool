@@ -109,11 +109,15 @@ parser.add_argument("--endframe",
 parser.add_argument("--extgt", type = str, required = False)
 parser.add_argument("--entergt",
         dest = "entergt", action="store_true")
+
 parser.add_argument("--useexternalgt", 
         dest = "entergt", action='store_false')
 parser.add_argument("--externaltrainingframes", type = int, required = False)
-
 parser.set_defaults(entergt=True)
+
+parser.add_argument("--shuffle", dest="shuffle", action="store_true")
+parser.add_argument("--noshuffle", dest="shuffle", action="store_false")
+parser.set_defaults(shuffle=True)
 
 args = parser.parse_args()
 
@@ -157,7 +161,11 @@ trackingData = loadTrackingData(args.trackerfile)
 # We can then work our way through the list as required, to avoid re-drawing the sample
 # and risking classifying the same frame twice etc.
 trainingframes = range(startVideoFrame, endVideoFrame)
-shuffle(trainingframes)
+if args.shuffle:
+    print "Randomising frames"
+    shuffle(trainingframes)
+else:
+    print "Using ordered frames"
 
 if args.extgt is not None:
     print "Loading external ground-truth file"
