@@ -139,9 +139,11 @@ parser.add_argument("--outfileexternalpreds",
         help = "The filename to output classifier performance on the externally specified data to - i.e. data in the external groundtruth file, that haven't been used for training or local classifier evaluation)")
 
 parser.add_argument("--loadrngstate",
-        dest="loadrngstate", type=str, required = False)
+        dest="loadrngstate", type=str, required = False,
+        help = "Load a random number state file to use for this invocation of the program. NB the treeclassifier uses the random number generator, so only really useful for reproducibilty when running in batch mode")
 parser.add_argument("--saverngstate",
-        dest = "saverngstate", type=str, required = False)
+        dest = "saverngstate", type=str, required = False,
+        help = "Save the random number state at the start of the file.  The inital state is obtained by calling np.random.seed()")
 args = parser.parse_args()
 
 if (not args.entergt) and args.extgt is None:
