@@ -109,32 +109,44 @@ def savePredictions(inputtree,  alltrackingdata, evaluationframes, filename):
 
 
 
-parser = argparse.ArgumentParser(description = "Interactively classify behaviours in a video")
+parser = argparse.ArgumentParser(description = "Interactively classify behaviours in a video.  For each frame enter a numeric behaviour state.  Press c to classify based on half of the classified frames.  The remaining frames are used to evaluate the performance of the classifier.  Can optionally use an external ground truth file for classification and/or verification.")
 
 parser.add_argument("--videofile",
-        dest = "videofile", type = str, required = True)
+        dest = "videofile", type = str, required = True,
+        help = "The input video file to classify")
 parser.add_argument("--trackerfile",
-        dest = "trackerfile", type = str, required = True)
-parser.add_argument("--startframe", type = int, required = False)
+        dest = "trackerfile", type = str, required = True,
+        help = "The data from some object tracking software.  Currently only OpenFace data are supported")
+parser.add_argument("--startframe", type = int, required = False,
+        help = "The frame of the video to start classifcation at.  Defaults to start of video")
 parser.add_argument("--endframe",
-        dest = "endframe", type = int, required = False)
-parser.add_argument("--extgt", type = str, required = False)
+        dest = "endframe", type = int, required = False,
+        help = "The end frame to run classification on.  Defaults to the end of the video")
+parser.add_argument("--extgt", type = str, required = False,
+        help = "Whether to use an external ground truth file. (currently) assumed to have 6 columns; the first containing the video frame number, the sixth containing the state" )
 parser.add_argument("--entergt",
-        dest = "entergt", action="store_true")
+        dest = "entergt", action="store_true",
+        help = "Whether to interactively enter ground truth data.  For each frame enter a numeric state, c to classify or u to undo the previous frame")
 
 parser.add_argument("--useexternalgt", 
-        dest = "entergt", action='store_false')
-parser.add_argument("--externaltrainingframes", type = int, required = False)
+        dest = "entergt", action='store_false',
+        help = "Whether to use the externally specified ground truth file for classification, instead of classifying interactivel")
+parser.add_argument("--externaltrainingframes", type = int, required = False,
+        help = "The number of frames to use for training and local classification if using an external ground truth file.  Will be prompted for if not specified")
 parser.set_defaults(entergt=True)
 
-parser.add_argument("--shuffle", dest="shuffle", action="store_true")
-parser.add_argument("--noshuffle", dest="shuffle", action="store_false")
+parser.add_argument("--shuffle", dest="shuffle", action="store_true",
+        help = "Whether to classify frames in a random order (default)")
+parser.add_argument("--noshuffle", dest="shuffle", action="store_false",
+        help = "Whether to classify frames in the order they appear in the video")
 parser.set_defaults(shuffle=True)
 
 parser.add_argument("--outfilelocalpreds",
-        dest="outfilelocalpreds", type = str, required = False)
+        dest="outfilelocalpreds", type = str, required = False,
+        help = "The filename to output classifier performance on the locally specified data to - i.e. data that have been classified interactively (or via the externaltrainingframes argument)")
 parser.add_argument("--outfileexternalpreds",
-        dest="outfileexternalpreds", type = str, required = False)
+        dest="outfileexternalpreds", type = str, required = False,
+        help = "The filename to output classifier performance on the externally specified data to - i.e. data in the external groundtruth file, that haven't been used for training or local classifier evaluation)")
 
 args = parser.parse_args()
 
