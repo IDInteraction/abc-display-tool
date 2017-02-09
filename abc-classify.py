@@ -111,6 +111,7 @@ parser.add_argument("--entergt",
         dest = "entergt", action="store_true")
 parser.add_argument("--useexternalgt", 
         dest = "entergt", action='store_false')
+parser.add_argument("--externaltrainingframes", type = int, required = False)
 
 parser.set_defaults(entergt=True)
 
@@ -195,7 +196,10 @@ if args.entergt:
         print str(trainedframescount) + " frames classified"
 
 else:
-    trainedframescount = int(raw_input("Enter training frames: "))
+    if args.externaltrainingframes is not None:
+        trainedframescount = args.externaltrainingframes
+    else:
+        trainedframescount = int(raw_input("Enter training frames: "))
     groundtruthDF = externalGT.loc[trainingframes[:trainedframescount],"state"]
     groundtruth = list(groundtruthDF)
 
