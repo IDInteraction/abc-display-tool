@@ -109,6 +109,8 @@ parser.add_argument("--endframe",
 parser.add_argument("--extgt", type = str, required = False)
 parser.add_argument("--entergt",
         dest = "entergt", action="store_true")
+parser.add_argument("--useexternalgt", 
+        dest = "entergt", action='store_false')
 
 parser.set_defaults(entergt=True)
 
@@ -181,7 +183,6 @@ if args.entergt:
                     trackingData.loc[trainingframes[(trainedframescount/2):trainedframescount]])
             if args.extgt is not None:
                 print "Classification using all remaining external ground truth data:"
-                # Run classifier on all remaining data using external ground truth
                 runClassifier(groundtruth[:(trainedframescount/2)],
                         trackingData.loc[trainingframes[:(trainedframescount/2)]],
                         externalGT.loc[trainingframes[trainedframescount:],"state"],
@@ -197,8 +198,15 @@ else:
     trainedframescount = int(raw_input("Enter training frames: "))
     groundtruthDF = externalGT.loc[trainingframes[:trainedframescount],"state"]
     groundtruth = list(groundtruthDF)
-    runClassifier(groundtruth, trackingData.loc[trainingframes[:trainedframescount]])
 
+    runClassifier(groundtruth[:(trainedframescount/2)],
+                  trackingData.loc[trainingframes[:(trainedframescount/2)]],
+                  groundtruth[(trainedframescount/2):],
+                  trackingData.loc[trainingframes[(trainedframescount/2):trainedframescount]])
 
-
+    print "Classification using all remaining external ground truth data:"
+    runClassifier(groundtruth[:(trainedframescount/2)],
+                        trackingData.loc[trainingframes[:(trainedframescount/2)]],
+                        externalGT.loc[trainingframes[trainedframescount:],"state"],
+                        trackingData.loc[trainingframes[trainedframescount:]])
 
