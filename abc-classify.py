@@ -7,20 +7,9 @@ import pandas as pd
 import argparse
 import cv2
 import re
-from random import shuffle
 from sklearn.tree import DecisionTreeClassifier 
 from sklearn import preprocessing
 from sklearn import metrics
-
-# Need video file
-# Openface / cppmt data
-
-# Random sample of frames
-# Display an image and get prediction
-
-
-# Construct rpart tree
-# Use rpart tree to predict
 
 def loadTrackingData(infile,
         guessClean = True):
@@ -71,7 +60,7 @@ def getVideoFrame(videosrc, frameNumber):
 def runClassifier(traininggroundtruth, trainingtrackingdata,
         evaluationgroundtruth, evaluationtrackingdata):
 
-    tree = DecisionTreeClassifier()
+    tree = DecisionTreeClassifier() #random_state = rndstate)
 
     trainedframescount  = len(traininggroundtruth)
     if len(trainingtrackingdata.index) != trainedframescount:
@@ -148,11 +137,22 @@ parser.add_argument("--outfileexternalpreds",
         dest="outfileexternalpreds", type = str, required = False,
         help = "The filename to output classifier performance on the externally specified data to - i.e. data in the external groundtruth file, that haven't been used for training or local classifier evaluation)")
 
+parser.add_argument("--randseed",
+        dest="randseed", type=int, required = False)
+
 args = parser.parse_args()
 
 if (not args.entergt) and args.extgt is None:
     print "If not entering ground-truth from video frames, external ground truth must be provided"
     sys.exit()
+
+if args.randseed is not None:
+    print "setting seed to: " + str(args.randseed)
+    np.random.seed(args.randseed)
+#    rndstate = np.random.RandomState(args.randseed)
+#else:
+#    rndstate = np.random.RandomState()
+
 
 videoFile = cv2.VideoCapture(args.videofile)
 
@@ -191,14 +191,16 @@ trackingData = loadTrackingData(args.trackerfile)
 trainingframes = range(startVideoFrame, endVideoFrame)
 if args.shuffle:
     print "Randomising frames"
-    shuffle(trainingframes)
+    # Must use np.random.shuffle for reproducibility, not shuffle since we have *only* set
+    # numpy's random seed
+    np.random.shuffle(trainingframes)
 else:
     print "Using ordered frames"
 
 if args.extgt is not None:
     print "Loading external ground-truth file"
     externalGT = loadExternalGroundTruth(args.extgt)
-    
+
 
 trainedframescount = 0
 
