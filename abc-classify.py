@@ -92,6 +92,13 @@ def savePredictions(inputtree,  alltrackingdata, evaluationframes, filename):
     predframe.sort_values("frame",inplace = True)
     predframe.to_csv(filename, index=False, columns=[ "frame","attention"])
 
+def getAccuracy(inputtree, evaluationgroundtruth,
+        evaluationtrackingdata):
+    predicted = inputtree.predict(evaluationtrackingdata)
+
+    accuracy = metrics.accuracy_score(evaluationgroundtruth, predicted)
+
+    return accuracy
 
 
 ##############################################
@@ -144,7 +151,22 @@ parser.add_argument("--loadrngstate",
 parser.add_argument("--saverngstate",
         dest = "saverngstate", type=str, required = False,
         help = "Save the random number state at the start of the file.  The inital state is obtained by calling np.random.seed()")
+
+parser.add_argument("--summaryfile",
+        dest = "summaryfile", type = str, required = False,
+        help = "A text file to append summary information from the run to.  Currently records participantCode, trainingframes, startframe, endframe, accuracy (local), accuracy (external)")
+parser.add_argument("--participantcode",
+        dest = "participantcode", type = str, required = False,
+        help = "The participant code to output in the summaryfile")
+
+
+
 args = parser.parse_args()
+
+
+if args.summaryfile is not None and args.participantcode is None:
+    print "A participant code must be provided if outputting summary data"
+    sys.exit()
 
 if (not args.entergt) and args.extgt is None:
     print "If not entering ground-truth from video frames, external ground truth must be provided"
@@ -289,3 +311,21 @@ else:
     if args.outfileexternalpreds is not None:
         savePredictions(externalpreds,  trackingData, trainingframes[trainedframescount:],
                 args.outfileexternalpreds)
+# TODO - code repetition with accuracy calc
+    if args.summaryfile is not None:
+        with(open(args.summaryfile, 'a')) as summaryfile:
+                summaryfile.write(args.participantcode + "," +
+                    str(trainedframescount) + "," +
+                    str(startVideoFrame) + "," +
+                    str(endVideoFrame) + "," + 
+                    str(getAccuracy(localpreds,
+                        groundtruth[(trainedframescount/2):],
+                        trackingData.loc[trainingframes[(trainedframescount/2):trainedframescount]])) + "," +
+                    str(getAccuracy(externalpreds,
+                        externalGT.loc[trainingframes[trainedframescount:],
+                            "state"],
+                        trackingData.loc[trainingframes[trainedframescount:]]))
+                     + "\n")
+                
+
+
