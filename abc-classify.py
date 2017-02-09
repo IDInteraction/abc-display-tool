@@ -10,6 +10,7 @@ import re
 from sklearn.tree import DecisionTreeClassifier 
 from sklearn import preprocessing
 from sklearn import metrics
+import pickle
 
 def loadTrackingData(infile,
         guessClean = True):
@@ -137,23 +138,32 @@ parser.add_argument("--outfileexternalpreds",
         dest="outfileexternalpreds", type = str, required = False,
         help = "The filename to output classifier performance on the externally specified data to - i.e. data in the external groundtruth file, that haven't been used for training or local classifier evaluation)")
 
-parser.add_argument("--randseed",
-        dest="randseed", type=int, required = False)
-
+parser.add_argument("--loadrngstate",
+        dest="loadrngstate", type=str, required = False)
+parser.add_argument("--saverngstate",
+        dest = "saverngstate", type=str, required = False)
 args = parser.parse_args()
 
 if (not args.entergt) and args.extgt is None:
     print "If not entering ground-truth from video frames, external ground truth must be provided"
     sys.exit()
 
-if args.randseed is not None:
-    print "setting seed to: " + str(args.randseed)
-    np.random.seed(args.randseed)
-#    rndstate = np.random.RandomState(args.randseed)
-#else:
-#    rndstate = np.random.RandomState()
+if args.loadrngstate is not None and args.saverngstate is not None:
+    print "Can only save OR load rng state"
 
+np.random.seed()
+state = np.random.get_state()
 
+if args.saverngstate is not None:
+    print "saving initial rng state"
+    with open(args.saverngstate, 'wb') as output:
+        pickle.dump(state, output, pickle.HIGHEST_PROTOCOL)
+
+if args.loadrngstate is not None:
+    print "Loading rng state"
+    with open(args.loadrngstate, 'rb') as input:
+        state = pickle.load(input)
+    np.random.set_state(state)
 videoFile = cv2.VideoCapture(args.videofile)
 
 if args.startframe is not None and args.endframe is not None:
