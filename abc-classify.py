@@ -68,32 +68,26 @@ def getVideoFrame(videosrc, frameNumber):
 
     return img
 
-def runClassifier(groundtruth, trackingdata):
+def runClassifier(traininggroundtruth, trainingtrackingdata,
+        evaluationgroundtruth, evaluationtrackingdata):
 
 
     tree = DecisionTreeClassifier()
 
-    trainedframescount  = len(groundtruth)
-    if len(trackingdata.index) != trainedframescount:
+    trainedframescount  = len(traininggroundtruth)
+    if len(trainingtrackingdata.index) != trainedframescount:
         print "Size mismatch"
         sys.exit()
-    print "Classifying + eval with " + str(trainedframescount) + " frames" 
-    trainingSet = trackingdata[0:(trainedframescount / 2)]
+    print "Classifying with " + str(trainedframescount) + " frames" 
+    print "Evaluating with  " + str(len(evaluationgroundtruth)) + " frames"
 
-    traininggroundtruth = groundtruth[:trainedframescount / 2]
+    tree.fit(trainingtrackingdata, traininggroundtruth)
 
-
-    tree.fit(trainingSet, traininggroundtruth)
-
-
-    predictionSet = trackingdata[(trainedframescount/2):]
-    expected = groundtruth[(trainedframescount / 2):]
-
-    predicted = tree.predict(predictionSet)
+    predicted = tree.predict(evaluationtrackingdata)
     
-    print(metrics.classification_report(expected, predicted))
-    print(metrics.confusion_matrix(expected, predicted))
-    print(metrics.accuracy_score(expected, predicted))
+    print(metrics.classification_report(evaluationgroundtruth, predicted))
+    print(metrics.confusion_matrix(evaluationgroundtruth, predicted))
+    print(metrics.accuracy_score(evaluationgroundtruth, predicted))
     
 
 
@@ -110,9 +104,19 @@ parser.add_argument("--trackerfile",
 parser.add_argument("--startframe", type = int, required = False)
 parser.add_argument("--endframe",
         dest = "endframe", type = int, required = False)
-parser.add_argument("--minframes", type = int, required = True)
+#parser.add_argument("--minframes", 
+#        dest = "minframes", type = int, required = True)
 parser.add_argument("--extgt", type = str, required = False)
+parser.add_argument("--entergt",
+        dest = "entergt", action="store_true")
+
+parser.set_defaults(entergt=True)
+
 args = parser.parse_args()
+
+if (not args.entergt) and args.extgt is None:
+    print "If not entering ground-truth from video frames, external ground truth must be provided"
+    sys.exit()
 
 cv2.namedWindow("Classification")
 videoFile = cv2.VideoCapture(args.videofile)
@@ -162,31 +166,38 @@ trainedframescount = 0
 
 groundtruth = []
 
-if args.extgt is None:
-    while trainedframescount < args.minframes:
-        img = getVideoFrame(videoFile, trainingframes[trainedframescount])
+if args.entergt:
+    while trainedframescount < len(trainingframes):
+        thisframe = trainingframes[trainedframescount]
+        img = getVideoFrame(videoFile,thisframe) 
  
         cv2.imshow("Classification", img)
  
         key =  cv2.waitKey(0) 
         if(chr(key) == 'c'):
-            runClassifier(groundtruth, trackingData.loc[trainingframes[:trainedframescount]])
+            runClassifier(groundtruth[:(trainedframescount/2)],
+                    trackingData.loc[trainingframes[:(trainedframescount/2)]],
+                    groundtruth[(trainedframescount/2):],
+                    trackingData.loc[trainingframes[(trainedframescount/2):trainedframescount]])
+            if args.extgt is not None:
+                print "Classification using all remaining external ground truth data:"
+                # Run classifier on all remaining data using external ground truth
+                runClassifier(groundtruth[:(trainedframescount/2)],
+                        trackingData.loc[trainingframes[:(trainedframescount/2)]],
+                        externalGT.loc[trainingframes[trainedframescount:],"state"],
+                        trackingData.loc[trainingframes[trainedframescount:]])
         else:
             groundtruth.append(int(chr(key)))
             trainedframescount = trainedframescount + 1
+            if args.extgt is not None:
+                print int(externalGT.loc[thisframe])
+        print str(trainedframescount) + " frames classified"
 
 else:
     trainedframescount = int(raw_input("Enter training frames: "))
     groundtruthDF = externalGT.loc[trainingframes[:trainedframescount],"state"]
     groundtruth = list(groundtruthDF)
-
-
-
-
-print "Using " + str(trainedframescount) + " frames for training and evaluation"
-
-
-runClassifier(groundtruth, trackingData.loc[trainingframes[:trainedframescount]])
+    runClassifier(groundtruth, trackingData.loc[trainingframes[:trainedframescount]])
 
 
 
