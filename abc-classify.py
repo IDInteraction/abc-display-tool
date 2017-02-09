@@ -117,14 +117,28 @@ args = parser.parse_args()
 cv2.namedWindow("Classification")
 videoFile = cv2.VideoCapture(args.videofile)
 
-# TODO test specified frames are within video!
+if args.startframe is not None and args.endframe is not None:
+    if args.startframe < 1:
+        print "Startframe must be >=1"
+        sys.exit()
+    if args.endframe < 1:
+        print "Endframe muse be >=1"
+    if args.endframe <= args.startframe:
+        print "Startframe must be before endframe"
+        sys.exit()
+
+
 if args.startframe is not None:
     startVideoFrame = args.startframe
 else:
     startVideoFrame = videoFile.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)
 
 if args.endframe is not None:
-    endVideoFrame= args.endframe
+    lastframe = videoFile.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT)
+    if lastframe < args.endframe:
+        print "Endframe is after the end of the video"
+        sys.exit()
+    endVideoFrame =  args.endframe
 else:
     endVideoFrame= videoFile.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT)
 
