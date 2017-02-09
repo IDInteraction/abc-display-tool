@@ -99,7 +99,7 @@ def savePredictions(inputtree,  alltrackingdata, evaluationframes, filename):
     predframe = pd.DataFrame(
             {'frame' : evaluationframes, 'attention' : predicted}
             )
-    predframe.sort("frame",inplace = True)
+    predframe.sort_values("frame",inplace = True)
     predframe.to_csv(filename, index=False, columns=[ "frame","attention"])
 
 
@@ -226,12 +226,16 @@ if args.entergt:
         elif(chr(key) == 'q'):
             print "Exiting"
             sys.exit()
-        else: # TODO: Implement undo
+        elif(chr(key) == 'u'):
+            print "Undoing"
+            groundtruth.pop()
+        else: 
             # TODO check numeric and trap
             groundtruth.append(int(chr(key)))
-            trainedframescount = trainedframescount + 1
             if args.extgt is not None:
                 print int(externalGT.loc[thisframe])
+
+        trainedframescount = len(groundtruth) 
         print str(trainedframescount) + " frames classified"
 
 else:
