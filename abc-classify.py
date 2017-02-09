@@ -43,7 +43,7 @@ def loadTrackingData(infile,
 def loadExternalGroundTruth(infile, format = "checkfile"):
     if format != "checkfile":
         print "Only checkfiles implemented"
-        quit()
+        sys.exit()
 
     indata = pd.read_csv(infile, index_col=0,
             names = ["frame", "x", "y", "w", "h", "state"])
@@ -64,7 +64,7 @@ def getVideoFrame(videosrc, frameNumber):
     ret, img = videosrc.read()
     if ret == False:
         print "Failed to capture frame" + str(frameNumber - 1)
-        quit()
+        sys.exit()
 
     return img
 
@@ -76,7 +76,7 @@ def runClassifier(groundtruth, trackingdata):
     trainedframescount  = len(groundtruth)
     if len(trackingdata.index) != trainedframescount:
         print "Size mismatch"
-        quit()
+        sys.exit()
     print "Classifying + eval with " + str(trainedframescount) + " frames" 
     trainingSet = trackingdata[0:(trainedframescount / 2)]
 
