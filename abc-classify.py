@@ -71,7 +71,6 @@ def getVideoFrame(videosrc, frameNumber):
 def runClassifier(traininggroundtruth, trainingtrackingdata,
         evaluationgroundtruth, evaluationtrackingdata):
 
-
     tree = DecisionTreeClassifier()
 
     trainedframescount  = len(traininggroundtruth)
@@ -89,8 +88,23 @@ def runClassifier(traininggroundtruth, trainingtrackingdata,
     print(metrics.confusion_matrix(evaluationgroundtruth, predicted))
     print(metrics.accuracy_score(evaluationgroundtruth, predicted))
     
+    return tree
 
 
+def savePredictions(inputtree,  alltrackingdata, evaluationframes, filename):
+    # Save the predictions from a tree
+    predictiontrackingdata = alltrackingdata.loc[evaluationframes]
+    predicted = inputtree.predict(predictiontrackingdata)
+
+    predframe = pd.DataFrame(
+            {'frame' : evaluationframes, 'attention' : predicted}
+            )
+    predframe.sort("frame",inplace = True)
+    predframe.to_csv(filename, index=False, columns=[ "frame","attention"])
+
+
+
+##############################################
 
 
 
@@ -104,8 +118,6 @@ parser.add_argument("--trackerfile",
 parser.add_argument("--startframe", type = int, required = False)
 parser.add_argument("--endframe",
         dest = "endframe", type = int, required = False)
-#parser.add_argument("--minframes", 
-#        dest = "minframes", type = int, required = True)
 parser.add_argument("--extgt", type = str, required = False)
 parser.add_argument("--entergt",
         dest = "entergt", action="store_true")
@@ -119,13 +131,17 @@ parser.add_argument("--shuffle", dest="shuffle", action="store_true")
 parser.add_argument("--noshuffle", dest="shuffle", action="store_false")
 parser.set_defaults(shuffle=True)
 
+parser.add_argument("--outfilelocalpreds",
+        dest="outfilelocalpreds", type = str, required = False)
+parser.add_argument("--outfileexternalpreds",
+        dest="outfileexternalpreds", type = str, required = False)
+
 args = parser.parse_args()
 
 if (not args.entergt) and args.extgt is None:
     print "If not entering ground-truth from video frames, external ground truth must be provided"
     sys.exit()
 
-cv2.namedWindow("Classification")
 videoFile = cv2.VideoCapture(args.videofile)
 
 if args.startframe is not None and args.endframe is not None:
@@ -178,6 +194,7 @@ trainedframescount = 0
 groundtruth = []
 
 if args.entergt:
+    cv2.namedWindow("Classification")
     while trainedframescount < len(trainingframes):
         thisframe = trainingframes[trainedframescount]
         img = getVideoFrame(videoFile,thisframe) 
@@ -186,17 +203,27 @@ if args.entergt:
  
         key =  cv2.waitKey(0) 
         if(chr(key) == 'c'):
-            runClassifier(groundtruth[:(trainedframescount/2)],
+            localpreds = runClassifier(groundtruth[:(trainedframescount/2)],
                     trackingData.loc[trainingframes[:(trainedframescount/2)]],
                     groundtruth[(trainedframescount/2):],
                     trackingData.loc[trainingframes[(trainedframescount/2):trainedframescount]])
+
+
+            if args.outfilelocalpreds is not None:
+                savePredictions(localpreds,  trackingData, trainingframes[(trainedframescount/2):trainedframescount],args.outfilelocalpreds)
+
             if args.extgt is not None:
                 print "Classification using all remaining external ground truth data:"
-                runClassifier(groundtruth[:(trainedframescount/2)],
+                externalpreds = runClassifier(groundtruth[:(trainedframescount/2)],
                         trackingData.loc[trainingframes[:(trainedframescount/2)]],
                         externalGT.loc[trainingframes[trainedframescount:],"state"],
                         trackingData.loc[trainingframes[trainedframescount:]])
-        else:
+
+
+                if args.outfileexternalpreds is not None:
+                    savePredictions(externalpreds,  trackingData,
+                            trainingframes[trainedframescount:], args.outfileexternalpreds)
+        else: # TODO: Implement undo
             groundtruth.append(int(chr(key)))
             trainedframescount = trainedframescount + 1
             if args.extgt is not None:
@@ -211,14 +238,20 @@ else:
     groundtruthDF = externalGT.loc[trainingframes[:trainedframescount],"state"]
     groundtruth = list(groundtruthDF)
 
-    runClassifier(groundtruth[:(trainedframescount/2)],
+    localpreds = runClassifier(groundtruth[:(trainedframescount/2)],
                   trackingData.loc[trainingframes[:(trainedframescount/2)]],
                   groundtruth[(trainedframescount/2):],
                   trackingData.loc[trainingframes[(trainedframescount/2):trainedframescount]])
 
+    if args.outfilelocalpreds is not None:
+        savePredictions(localpreds,  trackingData, trainingframes[(trainedframescount/2):trainedframescount],args.outfilelocalpreds)
+    
     print "Classification using all remaining external ground truth data:"
-    runClassifier(groundtruth[:(trainedframescount/2)],
+    externalpreds = runClassifier(groundtruth[:(trainedframescount/2)],
                         trackingData.loc[trainingframes[:(trainedframescount/2)]],
                         externalGT.loc[trainingframes[trainedframescount:],"state"],
                         trackingData.loc[trainingframes[trainedframescount:]])
 
+    if args.outfileexternalpreds is not None:
+        savePredictions(externalpreds,  trackingData, trainingframes[trainedframescount:],
+                args.outfileexternalpreds)
