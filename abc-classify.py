@@ -139,6 +139,9 @@ def getShuffledSuccessProbs(inputtree, evaluationgroundtruth, evaluationtracking
         return (-1, -1) 
 
 
+def testprob(probs, threshold):
+    return sum(probs >= threshold)/float(len(probs))
+
 def getAccuracy(inputtree, groundtruth, trackingdata):
 
     predicted = inputtree.predict(trackingdata)
@@ -319,9 +322,16 @@ if args.entergt:
                     savePredictions(tree,  trackingData,
                             trainingframes[trainedframescount:], args.outfileexternalpreds)
         elif(chr(key) == 'e'):
-            getShuffledSuccessProbs(tree,
+
+            print "ProbOK"
+
+            probs = getShuffledSuccessProbs(tree,
                     groundtruth[:trainedframescount],
                     trackingData.loc[trainingframes[:trainedframescount]])
+            print probs.mean()
+
+            for p in [0.8, 0.9, 0.95, 0.99]:
+                print "probability accuracy > " + str(p) + ": " + str(testprob(probs, p))
         elif(chr(key) == 'm'):
             getmulti = True
         elif(chr(key) == 'q'):
@@ -363,8 +373,6 @@ else:
         trackingData.loc[trainingframes[:trainedframescount]])
     print probs.mean()
     
-    def testprob(probs, threshold):
-        return sum(probs >= threshold)/float(len(probs))
 
     for p in [0.8, 0.9, 0.95, 0.99]:
         print "probability accuracy > " + str(p) + ": " + str(testprob(probs, p))
