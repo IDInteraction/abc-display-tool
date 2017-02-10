@@ -9,6 +9,8 @@ import cv2
 import re
 from sklearn.tree import DecisionTreeClassifier 
 from sklearn.model_selection import cross_val_score 
+from sklearn.model_selection import ShuffleSplit
+from sklearn.model_selection import KFold
 from sklearn import preprocessing
 from sklearn import metrics
 import pickle
@@ -118,11 +120,24 @@ def getAccuracyCrossVal(inputtree, evaluationgroundtruth,
 
     try:
         scores = cross_val_score(inputtree,  evaluationtrackingdata, 
-            evaluationgroundtruth)
+                evaluationgroundtruth)
         return  (scores.mean(), scores.std())
     except ValueError:
         print "Cross val accuracy calculation failed"
         return (-1, -1) 
+
+def getShuffledSuccessProbs(inputtree, evaluationgroundtruth, evaluationtrackingdata):
+    
+    crossvalidation = ShuffleSplit(n_splits = 1000, test_size = 0.5)
+
+    try:
+        scores = cross_val_score(inputtree,  evaluationtrackingdata, 
+                evaluationgroundtruth, cv=crossvalidation)
+        return scores
+    except ValueError:
+        print "Cross val accuracy calculation failed"
+        return (-1, -1) 
+
 
 def getAccuracy(inputtree, groundtruth, trackingdata):
 
@@ -303,6 +318,10 @@ if args.entergt:
                 if args.outfileexternalpreds is not None:
                     savePredictions(tree,  trackingData,
                             trainingframes[trainedframescount:], args.outfileexternalpreds)
+        elif(chr(key) == 'e'):
+            getShuffledSuccessProbs(tree,
+                    groundtruth[:trainedframescount],
+                    trackingData.loc[trainingframes[:trainedframescount]])
         elif(chr(key) == 'm'):
             getmulti = True
         elif(chr(key) == 'q'):
@@ -337,6 +356,19 @@ else:
                     groundtruth[:trainedframescount],
                     trackingData.loc[trainingframes[:trainedframescount]])
     print("Crossval Accuracy: Mean: %0.3f, Std: %0.3f" % (meanAc, stdAc))
+
+    print "ProbOK"
+    probs = getShuffledSuccessProbs(tree,
+        groundtruth[:trainedframescount],
+        trackingData.loc[trainingframes[:trainedframescount]])
+    print probs.mean()
+    
+    def testprob(probs, threshold):
+        return sum(probs >= threshold)/float(len(probs))
+
+    for p in [0.8, 0.9, 0.95, 0.99]:
+        print "probability accuracy > " + str(p) + ": " + str(testprob(probs, p))
+
 
     if args.outfileexternalpreds is not None:
         savePredictions(tree,  trackingData, trainingframes[trainedframescount:],
