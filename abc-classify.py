@@ -104,16 +104,25 @@ def runClassifier(traininggroundtruth, trainingtrackingdata):
     return tree
 
 
-def savePredictions(inputtree,  alltrackingdata, evaluationframes, filename):
+def savePredictions(inputtree,  alltrackingdata, evaluationframes, filename,
+        groundtruthframes = None, groundtruth = None):
     # Save the predictions from a tree
     predictiontrackingdata = alltrackingdata.loc[evaluationframes]
     predicted = inputtree.predict(predictiontrackingdata)
 
+    if groundtruthframes is not None and groundtruth is not None:
+        print "Including ground truth in predictions"
+
+        predicted = np.append(predicted,groundtruth)
+        evaluationframes = np.append(evaluationframes, groundtruthframes)
+
     predframe = pd.DataFrame(
-            {'frame' : evaluationframes, 'attention' : predicted}
+            {'frame' : evaluationframes, 'attention' : predicted,
+                'x' : 200, 'y' : 200, 'w' : 150, 'h' : 150}
             )
     predframe.sort_values("frame",inplace = True)
-    predframe.to_csv(filename, index=False, columns=[ "frame","attention"])
+    predframe.to_csv(filename, index=False, columns=[ "frame",
+        "x", "y", "w", "h", "attention"], header=False)
 
 def getAccuracyCrossVal(inputtree, evaluationgroundtruth,
         evaluationtrackingdata):
@@ -202,6 +211,10 @@ parser.add_argument("--participantcode",
         dest = "participantcode", type = str, required = False,
         help = "The participant code to output in the summaryfile")
 
+parser.add_argument("--includegt",
+        dest = "includegt", action = "store_true",
+        help = "Whether to include ground truth frames when outputting predictions")
+parser.set_defaults(includegt=False)
 
 
 args = parser.parse_args()
@@ -379,8 +392,16 @@ else:
 
 
     if args.outfileexternalpreds is not None:
-        savePredictions(tree,  trackingData, trainingframes[trainedframescount:],
-                args.outfileexternalpreds)
+        if args.includegt:
+            savePredictions(tree,  trackingData, trainingframes[trainedframescount:],
+                    args.outfileexternalpreds,
+                    groundtruthframes = trainingframes[:trainedframescount],
+                    groundtruth = groundtruth[:trainedframescount])
+        else:
+            savePredictions(tree,  trackingData, trainingframes[trainedframescount:],
+                    args.outfileexternalpreds)
+
+ 
 # TODO - code repetition with accuracy calc
     if args.summaryfile is not None:
         print "Outputting summary"
