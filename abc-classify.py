@@ -33,7 +33,7 @@ def loadTrackingData(infile,
 def loadExternalGroundTruth(infile, format = "checkfile"):
     if format != "checkfile":
         print "Only checkfiles implemented"
-        sys.exit()
+#        sys.exit()
 
     indata = pd.read_csv(infile, index_col=0,
             names = ["frame", "x", "y", "w", "h", "state"])
@@ -43,13 +43,19 @@ def loadExternalGroundTruth(infile, format = "checkfile"):
     return indata
 
 
-def getVideoFrame(videosrc, frameNumber):
+def getVideoFrame(videosrc, frameNumber, directFrame = True):
     # Return the video frame from the video
     # Pass in a **1 INDEXED** video frame number
+    # This link implies setting frame directly can be problematic, but seems
+    # OK on our videos
     # http://stackoverflow.com/questions/11469281/getting-individual-frames-using-cv-cap-prop-pos-frames-in-cvsetcaptureproperty
-    fps = videosrc.get(cv2.cv.CV_CAP_PROP_FPS)
-    frameTime = 1000 * (frameNumber-1) / fps
-    videosrc.set(cv2.cv.CV_CAP_PROP_POS_MSEC, frameTime)
+
+    if not directFrame:
+        fps = videosrc.get(cv2.cv.CV_CAP_PROP_FPS)
+        frameTime = 1000 * (frameNumber-1) / fps
+        videosrc.set(cv2.cv.CV_CAP_PROP_POS_MSEC, frameTime)
+    else:
+        videosrc.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, frameNumber - 1)
 
     ret, img = videosrc.read()
     if ret == False:
@@ -57,6 +63,28 @@ def getVideoFrame(videosrc, frameNumber):
         sys.exit()
 
     return img
+
+def getMultiVideoFrame(videosrc, frameNumber):
+    # Return the target frame, and the frames either side of it
+    # by trial and error 3 frames is about right to see a difference
+    # TODO let the user set this value
+    # OpenCV returns the 1st frame if we rewind off the beginning;
+    # TODO? return a blank frame.  Check what happens at the end of the video
+    mainframe = getVideoFrame(videosrc, frameNumber)
+    prevframe = getVideoFrame(videosrc, frameNumber - 3 )
+    nextframe = getVideoFrame(videosrc, frameNumber + 3)
+    h, w = mainframe.shape[:2]
+
+    vis = np.zeros((h, 3*w,3), np.uint8)
+    vis[:h, :w, :3] = prevframe
+    vis[:h, w:2*w, :3] = mainframe
+    vis[:h, 2*w:3*w, :3] = nextframe
+
+    return vis 
+
+
+
+
 
 def runClassifier(traininggroundtruth, trainingtrackingdata,
         evaluationgroundtruth, evaluationtrackingdata):
@@ -245,7 +273,7 @@ if args.entergt:
     cv2.namedWindow("Classification")
     while trainedframescount < len(trainingframes):
         thisframe = trainingframes[trainedframescount]
-        img = getVideoFrame(videoFile,thisframe) 
+        img = getMultiVideoFrame(videoFile,thisframe) 
  
         cv2.imshow("Classification", img)
  
