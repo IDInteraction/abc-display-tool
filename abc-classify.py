@@ -43,13 +43,19 @@ def loadExternalGroundTruth(infile, format = "checkfile"):
     return indata
 
 
-def getVideoFrame(videosrc, frameNumber):
+def getVideoFrame(videosrc, frameNumber, directFrame = True):
     # Return the video frame from the video
     # Pass in a **1 INDEXED** video frame number
+    # This link implies setting frame directly can be problematic, but seems
+    # OK on our videos
     # http://stackoverflow.com/questions/11469281/getting-individual-frames-using-cv-cap-prop-pos-frames-in-cvsetcaptureproperty
-    fps = videosrc.get(cv2.cv.CV_CAP_PROP_FPS)
-    frameTime = 1000 * (frameNumber-1) / fps
-    videosrc.set(cv2.cv.CV_CAP_PROP_POS_MSEC, frameTime)
+
+    if not directFrame:
+        fps = videosrc.get(cv2.cv.CV_CAP_PROP_FPS)
+        frameTime = 1000 * (frameNumber-1) / fps
+        videosrc.set(cv2.cv.CV_CAP_PROP_POS_MSEC, frameTime)
+    else:
+        videosrc.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, frameNumber - 1)
 
     ret, img = videosrc.read()
     if ret == False:
