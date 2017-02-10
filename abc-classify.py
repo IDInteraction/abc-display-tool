@@ -285,6 +285,8 @@ if args.entergt:
 
         trainedframescount = len(groundtruth) 
         print str(trainedframescount) + " frames classified"
+        print pd.Series(groundtruth).value_counts()
+
 
 else:
     if args.externaltrainingframes is not None:
