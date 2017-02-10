@@ -8,6 +8,7 @@ import argparse
 import cv2
 import re
 from sklearn.tree import DecisionTreeClassifier 
+from sklearn.model_selection import cross_val_score 
 from sklearn import preprocessing
 from sklearn import metrics
 import pickle
@@ -86,26 +87,18 @@ def getMultiVideoFrame(videosrc, frameNumber):
 
 
 
-def runClassifier(traininggroundtruth, trainingtrackingdata,
-        evaluationgroundtruth, evaluationtrackingdata):
+def runClassifier(traininggroundtruth, trainingtrackingdata):
 
-    tree = DecisionTreeClassifier() #random_state = rndstate)
+    tree = DecisionTreeClassifier() 
 
     trainedframescount  = len(traininggroundtruth)
     if len(trainingtrackingdata.index) != trainedframescount:
         print "Size mismatch"
         sys.exit()
     print "Classifying with " + str(trainedframescount) + " frames" 
-    print "Evaluating with  " + str(len(evaluationgroundtruth)) + " frames"
 
     tree.fit(trainingtrackingdata, traininggroundtruth)
 
-    predicted = tree.predict(evaluationtrackingdata)
-    
-    print(metrics.classification_report(evaluationgroundtruth, predicted))
-    print(metrics.confusion_matrix(evaluationgroundtruth, predicted))
-    print(metrics.accuracy_score(evaluationgroundtruth, predicted))
-    
     return tree
 
 
@@ -120,21 +113,28 @@ def savePredictions(inputtree,  alltrackingdata, evaluationframes, filename):
     predframe.sort_values("frame",inplace = True)
     predframe.to_csv(filename, index=False, columns=[ "frame","attention"])
 
-def getAccuracy(inputtree, evaluationgroundtruth,
+def getAccuracyCrossVal(inputtree, evaluationgroundtruth,
         evaluationtrackingdata):
-    predicted = inputtree.predict(evaluationtrackingdata)
 
-    accuracy = metrics.accuracy_score(evaluationgroundtruth, predicted)
+    try:
+        scores = cross_val_score(inputtree,  evaluationtrackingdata, 
+            evaluationgroundtruth)
+        return  (scores.mean(), scores.std())
+    except ValueError:
+        print "Cross val accuracy calculation failed"
+        return (-1, -1) 
+
+def getAccuracy(inputtree, groundtruth, trackingdata):
+
+    predicted = inputtree.predict(trackingdata)
+    
+    accuracy = metrics.accuracy_score(groundtruth, predicted)
 
     return accuracy
 
-
 ##############################################
 
-
-
-
-parser = argparse.ArgumentParser(description = "Interactively classify behaviours in a video.  For each frame enter a numeric behaviour state.  Press c to classify based on half of the classified frames.  The remaining frames are used to evaluate the performance of the classifier.  Can optionally use an external ground truth file for classification and/or verification.")
+parser = argparse.ArgumentParser(description = "Interactively classify behaviours in a video.  For each frame enter a numeric behaviour state.  Press c to classify based on the frames classified so far.  Accuracy is evaluated with cross validation.  Can optionally use an external ground truth file for classification and/or verification.")
 
 parser.add_argument("--videofile",
         dest = "videofile", type = str, required = True,
@@ -281,25 +281,27 @@ if args.entergt:
  
         key =  cv2.waitKey(0) 
         if(chr(key) == 'c'):
-            localpreds = runClassifier(groundtruth[:(trainedframescount/2)],
-                    trackingData.loc[trainingframes[:(trainedframescount/2)]],
-                    groundtruth[(trainedframescount/2):],
-                    trackingData.loc[trainingframes[(trainedframescount/2):trainedframescount]])
+            tree = runClassifier(groundtruth[:(trainedframescount)],
+                    trackingData.loc[trainingframes[:(trainedframescount)]])
 
-
-            if args.outfilelocalpreds is not None:
-                savePredictions(localpreds,  trackingData, trainingframes[(trainedframescount/2):trainedframescount],args.outfilelocalpreds)
+            (meanAc, stdAc)  = getAccuracyCrossVal(tree, 
+                    groundtruth[:trainedframescount],
+                    trackingData.loc[trainingframes[:trainedframescount]])
+            print("Crossval Accuracy: Mean: %0.3f, Std: %0.3f" % (meanAc, stdAc))
 
             if args.extgt is not None:
                 print "Classification using all remaining external ground truth data:"
-                externalpreds = runClassifier(groundtruth[:(trainedframescount/2)],
-                        trackingData.loc[trainingframes[:(trainedframescount/2)]],
-                        externalGT.loc[trainingframes[trainedframescount:],"state"],
-                        trackingData.loc[trainingframes[trainedframescount:]])
 
+                predicted = tree.predict(trackingData.loc[trainingframes[trainedframescount:]])
+                evaluationgroundtruth = externalGT.loc[trainingframes[trainedframescount:]]
+    
+                print(metrics.classification_report(evaluationgroundtruth, predicted))
+                print(metrics.confusion_matrix(evaluationgroundtruth, predicted))
+                print(metrics.accuracy_score(evaluationgroundtruth, predicted))
+    
 
-            if args.outfileexternalpreds is not None:
-                savePredictions(externalpreds,  trackingData,
+                if args.outfileexternalpreds is not None:
+                    savePredictions(tree,  trackingData,
                             trainingframes[trainedframescount:], args.outfileexternalpreds)
         elif(chr(key) == 'm'):
             getmulti = True
@@ -328,34 +330,30 @@ else:
     groundtruthDF = externalGT.loc[trainingframes[:trainedframescount],"state"]
     groundtruth = list(groundtruthDF)
 
-    localpreds = runClassifier(groundtruth[:(trainedframescount/2)],
-                  trackingData.loc[trainingframes[:(trainedframescount/2)]],
-                  groundtruth[(trainedframescount/2):],
-                  trackingData.loc[trainingframes[(trainedframescount/2):trainedframescount]])
+    tree = runClassifier(groundtruth[:(trainedframescount)],
+                  trackingData.loc[trainingframes[:(trainedframescount)]])
 
-    if args.outfilelocalpreds is not None:
-        savePredictions(localpreds,  trackingData, trainingframes[(trainedframescount/2):trainedframescount],args.outfilelocalpreds)
-    
-    print "Classification using all remaining external ground truth data:"
-    externalpreds = runClassifier(groundtruth[:(trainedframescount/2)],
-                        trackingData.loc[trainingframes[:(trainedframescount/2)]],
-                        externalGT.loc[trainingframes[trainedframescount:],"state"],
-                        trackingData.loc[trainingframes[trainedframescount:]])
+    (meanAc, stdAc)  = getAccuracyCrossVal(tree, 
+                    groundtruth[:trainedframescount],
+                    trackingData.loc[trainingframes[:trainedframescount]])
+    print("Crossval Accuracy: Mean: %0.3f, Std: %0.3f" % (meanAc, stdAc))
 
     if args.outfileexternalpreds is not None:
-        savePredictions(externalpreds,  trackingData, trainingframes[trainedframescount:],
+        savePredictions(tree,  trackingData, trainingframes[trainedframescount:],
                 args.outfileexternalpreds)
 # TODO - code repetition with accuracy calc
     if args.summaryfile is not None:
+        print "Outputting summary"
+
         with(open(args.summaryfile, 'a')) as summaryfile:
                 summaryfile.write(args.participantcode + "," +
                     str(trainedframescount) + "," +
                     str(startVideoFrame) + "," +
                     str(endVideoFrame) + "," + 
-                    str(getAccuracy(localpreds,
-                        groundtruth[(trainedframescount/2):],
-                        trackingData.loc[trainingframes[(trainedframescount/2):trainedframescount]])) + "," +
-                    str(getAccuracy(externalpreds,
+                    str(getAccuracyCrossVal(tree,
+                        groundtruth[:trainedframescount],
+                        trackingData.loc[trainingframes[:trainedframescount]])[1]) + "," +
+                    str(getAccuracy(tree,
                         externalGT.loc[trainingframes[trainedframescount:],
                             "state"],
                         trackingData.loc[trainingframes[trainedframescount:]]))
