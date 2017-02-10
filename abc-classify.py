@@ -166,12 +166,9 @@ parser.add_argument("--noshuffle", dest="shuffle", action="store_false",
         help = "Whether to classify frames in the order they appear in the video")
 parser.set_defaults(shuffle=True)
 
-parser.add_argument("--outfilelocalpreds",
-        dest="outfilelocalpreds", type = str, required = False,
-        help = "The filename to output classifier performance on the locally specified data to - i.e. data that have been classified interactively (or via the externaltrainingframes argument)")
 parser.add_argument("--outfileexternalpreds",
         dest="outfileexternalpreds", type = str, required = False,
-        help = "The filename to output classifier performance on the externally specified data to - i.e. data in the external groundtruth file, that haven't been used for training or local classifier evaluation)")
+        help = "The filename to output classifier performance on the data that haven't been used to construct the classifier") 
 
 parser.add_argument("--loadrngstate",
         dest="loadrngstate", type=str, required = False,
@@ -301,8 +298,8 @@ if args.entergt:
                         trackingData.loc[trainingframes[trainedframescount:]])
 
 
-                if args.outfileexternalpreds is not None:
-                    savePredictions(externalpreds,  trackingData,
+            if args.outfileexternalpreds is not None:
+                savePredictions(externalpreds,  trackingData,
                             trainingframes[trainedframescount:], args.outfileexternalpreds)
         elif(chr(key) == 'm'):
             getmulti = True
