@@ -268,12 +268,17 @@ trainedframescount = 0
 
 
 groundtruth = []
+getmulti = False
 
 if args.entergt:
     cv2.namedWindow("Classification")
     while trainedframescount < len(trainingframes):
         thisframe = trainingframes[trainedframescount]
-        img = getMultiVideoFrame(videoFile,thisframe) 
+        if getmulti:
+            img = getMultiVideoFrame(videoFile, thisframe)
+            getmulti = False
+        else:
+            img = getVideoFrame(videoFile,thisframe) 
  
         cv2.imshow("Classification", img)
  
@@ -299,6 +304,8 @@ if args.entergt:
                 if args.outfileexternalpreds is not None:
                     savePredictions(externalpreds,  trackingData,
                             trainingframes[trainedframescount:], args.outfileexternalpreds)
+        elif(chr(key) == 'm'):
+            getmulti = True
         elif(chr(key) == 'q'):
             print "Exiting"
             sys.exit()
