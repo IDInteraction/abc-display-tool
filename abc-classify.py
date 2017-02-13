@@ -196,6 +196,9 @@ def playbackPredictions(vidsource, predictions, startframe, endframe,
         ind = ind + 1
 
     cv2.namedWindow("Playback")
+    
+
+
 #   No way to reliably control playback speed - just go for full speed
 #   TODO implement something to playback properly
 #    fps = vidsource.get(cv2.cv.CV_CAP_PROP_FPS)
@@ -217,6 +220,11 @@ def playbackPredictions(vidsource, predictions, startframe, endframe,
                   thickness = 2 )
         except KeyError:
             print "No predictions for frame: " + f
+
+        textline = 0
+        for c in colours:
+            cv2.putText(img, "State " + str(textline), (20, 20 + textline * 18), cv2.cv.CV_FONT_HERSHEY_PLAIN, 1.5, c, 2)
+            textline = textline + 1
 
 
         cv2.imshow("Playback", img)
