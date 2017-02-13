@@ -85,10 +85,6 @@ def getMultiVideoFrame(videosrc, frameNumber):
 
     return vis 
 
-
-
-
-
 def runClassifier(traininggroundtruth, trainingtrackingdata):
 
     tree = DecisionTreeClassifier() 
@@ -103,10 +99,8 @@ def runClassifier(traininggroundtruth, trainingtrackingdata):
 
     return tree
 
-
-def savePredictions(inputtree,  alltrackingdata, evaluationframes, filename,
+def getPredictions(inputtree, alltrackingdata, evaluationframes,
         groundtruthframes = None, groundtruth = None):
-    # Save the predictions from a tree
     predictiontrackingdata = alltrackingdata.loc[evaluationframes]
     predicted = inputtree.predict(predictiontrackingdata)
 
@@ -115,6 +109,15 @@ def savePredictions(inputtree,  alltrackingdata, evaluationframes, filename,
 
         predicted = np.append(predicted,groundtruth)
         evaluationframes = np.append(evaluationframes, groundtruthframes)
+
+    return predicted
+
+
+def savePredictions(inputtree,  alltrackingdata, evaluationframes, filename,
+        groundtruthframes = None, groundtruth = None):
+    # Save the predictions from a tree
+
+    predicted = getPredictions(inputtree, alltrackingdata, evaluationframes)
 
     predframe = pd.DataFrame(
             {'frame' : evaluationframes, 'attention' : predicted,
@@ -353,6 +356,9 @@ if args.entergt:
         elif(chr(key) == 'u'):
             print "Undoing"
             groundtruth.pop()
+        elif(chr(key) == 'r'):
+            print "Playing predictions"
+
         else: 
             # TODO check numeric and trap
             groundtruth.append(int(chr(key)))
@@ -380,7 +386,7 @@ else:
                     trackingData.loc[trainingframes[:trainedframescount]])
     print("Crossval Accuracy: Mean: %0.3f, Std: %0.3f" % (meanAc, stdAc))
 
-    print "ProbOK"
+    print "Probability accuracy at least:"
     probs = getShuffledSuccessProbs(tree,
         groundtruth[:trainedframescount],
         trackingData.loc[trainingframes[:trainedframescount]])
