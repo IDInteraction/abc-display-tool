@@ -177,9 +177,14 @@ def getAccuracy(inputtree, groundtruth, trackingdata):
 
     return accuracy
 
+# Callback for when trackbar changes position
+def onChange(trackbarValue):
+    pass
+
 def playbackPredictions(vidsource, predictions, startframe, endframe,
         bbox = (225,125,150,150)):
     
+
     if endframe - startframe != len(predictions):
             print "Video period of interest is " + chr(endframe - startframe) + " frames, but have predictions for " + chr(len(predictions)) + " frames"
 
@@ -197,29 +202,29 @@ def playbackPredictions(vidsource, predictions, startframe, endframe,
 
     cv2.namedWindow("Playback")
     
+    cv2.createTrackbar("position", "Playback", startframe, endframe - 1, onChange)
 
 
-#   No way to reliably control playback speed - just go for full speed
-#   TODO implement something to playback properly
-#    fps = vidsource.get(cv2.cv.CV_CAP_PROP_FPS)
-#    fudgefactor = 10# Guesstimated amount scale framewait by to get roughly realtim eplayback
-#    framewait = int((1000/fps)/fudgefactor)
     framewait = 1
-    print framewait
-    for f in  range(startframe, endframe):
-        vidsource.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, f - 1) # frames are 0 indexed
+
+    ret = True
+    f = startframe
+    while ret:
         ret, img = vidsource.read()
         if ret == False:
             print "Failed to capture frame " + str(f - 1)
             break
+
+        f = cv2.getTrackbarPos("position", "Playback")
+        vidsource.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, f)
         try: 
             thispred = predictions.loc[f] 
             cv2.rectangle(img, (bbox[0], bbox[1]),
                 (bbox[0] + bbox[2], bbox[1] + bbox[3]),
-                 color = colours[thispred], # Only have predictions for period of interest
+                 color = colours[thispred], 
                   thickness = 2 )
-        except KeyError:
-            print "No predictions for frame: " + f
+        except KeyError: # Didn't have prediction for frame
+            pass
 
         textline = 0
         for c in colours:
