@@ -426,11 +426,12 @@ if args.entergt:
             playbackPredictions(videoFile, predictions, startVideoFrame, endVideoFrame)
 
         else: 
-            # TODO check numeric and trap
-            groundtruth.append(int(chr(key)))
-            if args.extgt is not None:
-                print int(externalGT.loc[thisframe])
-
+            try:
+                groundtruth.append(int(chr(key)))
+                if args.extgt is not None:
+                    print "External GT was: " + str(int(externalGT.loc[thisframe]))
+            except ValueError:
+                print "Invalid behaviour state entered; must be numeric"
         trainedframescount = len(groundtruth) 
         print str(trainedframescount) + " frames classified"
         print pd.Series(groundtruth).value_counts()
