@@ -336,7 +336,7 @@ if args.entergt:
                             trainingframes[trainedframescount:], args.outfileexternalpreds)
         elif(chr(key) == 'e'):
 
-            print "ProbOK"
+            print "Probability accuracy at least:"
 
             probs = getShuffledSuccessProbs(tree,
                     groundtruth[:trainedframescount],
