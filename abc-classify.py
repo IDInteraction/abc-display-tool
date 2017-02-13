@@ -31,6 +31,17 @@ def loadTrackingData(infile,
             mask = [x|y for (x,y) in zip(AUCols, ControlCols)] 
 
             indata.drop(indata.columns[mask], axis = 1, inplace = True)
+        if set(['Timestamp (ms)',
+            'Active points',
+            'Bounding box centre X (px)']).issubset(indata.columns.values):
+            print("CppMT input detected")
+
+            indata.index.names = ['frame']
+            del indata['Timestamp (ms)']
+
+        else:
+            print("Could not recognise input format")
+            sys.exit()
 
     return indata
 
