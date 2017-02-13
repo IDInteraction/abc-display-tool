@@ -14,6 +14,7 @@ from sklearn.model_selection import KFold
 from sklearn import preprocessing
 from sklearn import metrics
 import pickle
+import colorsys
 
 def loadTrackingData(infile,
         guessClean = True):
@@ -62,7 +63,7 @@ def getVideoFrame(videosrc, frameNumber, directFrame = True):
 
     ret, img = videosrc.read()
     if ret == False:
-        print "Failed to capture frame" + str(frameNumber - 1)
+        print "Failed to capture frame " + str(frameNumber - 1)
         sys.exit()
 
     return img
@@ -99,17 +100,20 @@ def runClassifier(traininggroundtruth, trainingtrackingdata):
 
     return tree
 
-def getPredictions(inputtree, alltrackingdata, evaluationframes,
-        groundtruthframes = None, groundtruth = None):
+def getPredictions(inputtree, alltrackingdata, evaluationframes, groundtruthframes = None, groundtruth = None):
+
     predictiontrackingdata = alltrackingdata.loc[evaluationframes]
-    predicted = inputtree.predict(predictiontrackingdata)
+    predictions = inputtree.predict(predictiontrackingdata)
 
     if groundtruthframes is not None and groundtruth is not None:
         print "Including ground truth in predictions"
 
-        predicted = np.append(predicted,groundtruth)
+        predictions = np.append(predictions,groundtruth)
+
         evaluationframes = np.append(evaluationframes, groundtruthframes)
 
+    predicted = pd.Series( predictions,  index = evaluationframes)
+    
     return predicted
 
 
@@ -161,6 +165,57 @@ def getAccuracy(inputtree, groundtruth, trackingdata):
     accuracy = metrics.accuracy_score(groundtruth, predicted)
 
     return accuracy
+
+def playbackPredictions(vidsource, predictions, startframe, endframe,
+        bbox = (225,150,150,150)):
+    
+    if endframe - startframe != len(predictions):
+            print "Video period of interest is " + chr(endframe - startframe) + " frames, but have predictions for " + chr(len(predictions)) + " frames"
+
+
+    # http://stackoverflow.com/questions/876853/generating-color-ranges-in-python
+    Nstates = max(predictions) + 1
+
+    HSV_tuples = [(x*1.0/Nstates, 0.5, 0.5) for x in range(Nstates)]
+    colours = map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples)
+    # Must be a bettter way of doing this - scale each colour
+    ind = 0
+    for c in colours:
+        colours[ind] = tuple(x*255 for  x in c)
+        ind = ind + 1
+
+    cv2.namedWindow("Playback")
+#   No way to reliably control playback speed - just go for full speed
+#   TODO implement something to playback properly
+#    fps = vidsource.get(cv2.cv.CV_CAP_PROP_FPS)
+#    fudgefactor = 10# Guesstimated amount scale framewait by to get roughly realtim eplayback
+#    framewait = int((1000/fps)/fudgefactor)
+    framewait = 1
+    print framewait
+    for f in  range(startframe, endframe):
+        vidsource.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, f - 1) # frames are 0 indexed
+        ret, img = vidsource.read()
+        if ret == False:
+            print "Failed to capture frame " + str(f - 1)
+            break
+        if f in predictions.index:
+            thispred = predictions.loc[f] 
+            cv2.rectangle(img, (bbox[0], bbox[1]),
+                (bbox[0] + bbox[2], bbox[1] + bbox[3]),
+                 color = colours[thispred], # Only have predictions for period of interest
+                 thickness = 2 )
+
+
+        cv2.imshow("Playback", img)
+        key = cv2.waitKey( framewait) & 0xFF
+        if chr(key) == 'q':
+            break
+    print "Press any key to continue"
+    cv2.waitKey(0)
+    cv2.destroyWindow("Playback")
+
+
+
 
 ##############################################
 
@@ -357,7 +412,16 @@ if args.entergt:
             print "Undoing"
             groundtruth.pop()
         elif(chr(key) == 'r'):
-            print "Playing predictions"
+            print "Playing predictions, including frames manually classified"
+
+            tree = runClassifier(groundtruth[:(trainedframescount)],
+                    trackingData.loc[trainingframes[:(trainedframescount)]])
+
+            predictions = getPredictions(tree, trackingData, 
+                    trainingframes[trainedframescount:],
+                    groundtruthframes = trainingframes[:trainedframescount],
+                    groundtruth =  groundtruth)
+            playbackPredictions(videoFile, predictions, startVideoFrame, endVideoFrame)
 
         else: 
             # TODO check numeric and trap
