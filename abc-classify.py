@@ -433,6 +433,7 @@ if args.entergt:
             print "Undoing"
             groundtruth.pop()
         elif(chr(key) == 'r'):
+            cv2.destroyWindow("Classification")
             print "Playing predictions, including frames manually classified"
 
             tree = runClassifier(groundtruth[:(trainedframescount)],
@@ -443,7 +444,7 @@ if args.entergt:
                     groundtruthframes = trainingframes[:trainedframescount],
                     groundtruth =  groundtruth)
             playbackPredictions(videoFile, predictions, startVideoFrame, endVideoFrame)
-
+            cv2.namedWindow("Classification")
         else: 
             try:
                 groundtruth.append(int(chr(key)))
