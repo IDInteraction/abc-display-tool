@@ -167,7 +167,7 @@ def getAccuracy(inputtree, groundtruth, trackingdata):
     return accuracy
 
 def playbackPredictions(vidsource, predictions, startframe, endframe,
-        bbox = (225,150,150,150)):
+        bbox = (225,125,150,150)):
     
     if endframe - startframe != len(predictions):
             print "Video period of interest is " + chr(endframe - startframe) + " frames, but have predictions for " + chr(len(predictions)) + " frames"
@@ -198,12 +198,14 @@ def playbackPredictions(vidsource, predictions, startframe, endframe,
         if ret == False:
             print "Failed to capture frame " + str(f - 1)
             break
-        if f in predictions.index:
+        try: 
             thispred = predictions.loc[f] 
             cv2.rectangle(img, (bbox[0], bbox[1]),
                 (bbox[0] + bbox[2], bbox[1] + bbox[3]),
                  color = colours[thispred], # Only have predictions for period of interest
-                 thickness = 2 )
+                  thickness = 2 )
+        except KeyError:
+            print "No predictions for frame: " + f
 
 
         cv2.imshow("Playback", img)
