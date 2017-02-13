@@ -264,8 +264,8 @@ parser.add_argument("--noshuffle", dest="shuffle", action="store_false",
         help = "Whether to classify frames in the order they appear in the video")
 parser.set_defaults(shuffle=True)
 
-parser.add_argument("--outfileexternalpreds",
-        dest="outfileexternalpreds", type = str, required = False,
+parser.add_argument("--outfile",
+        dest="outfile", type = str, required = False,
         help = "The filename to output classifier performance on the data that haven't been used to construct the classifier") 
 
 parser.add_argument("--loadrngstate",
@@ -402,9 +402,9 @@ if args.entergt:
                 print(metrics.accuracy_score(evaluationgroundtruth, predicted))
     
 
-                if args.outfileexternalpreds is not None:
-                    savePredictions(tree,  trackingData,
-                            trainingframes[trainedframescount:], args.outfileexternalpreds)
+            if args.outfile is not None:
+                savePredictions(tree,  trackingData,
+                        trainingframes[trainedframescount:], args.outfile)
         elif(chr(key) == 'e'):
 
             print "Probability accuracy at least:"
@@ -475,15 +475,15 @@ else:
         print "probability accuracy > " + str(p) + ": " + str(testprob(probs, p))
 
 
-    if args.outfileexternalpreds is not None:
+    if args.outfile is not None:
         if args.includegt:
             savePredictions(tree,  trackingData, trainingframes[trainedframescount:],
-                    args.outfileexternalpreds,
+                    args.outfile,
                     groundtruthframes = trainingframes[:trainedframescount],
                     groundtruth = groundtruth[:trainedframescount])
         else:
             savePredictions(tree,  trackingData, trainingframes[trainedframescount:],
-                    args.outfileexternalpreds)
+                    args.outfile)
 
  
 # TODO - code repetition with accuracy calc
