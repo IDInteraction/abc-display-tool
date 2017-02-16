@@ -68,24 +68,12 @@ fullformat_names = ["Frame", "time", "actpt", "bbcx", "bbcy",
 
 narrowformat_names = ["Frame", "bbx", "bby", "bbw", "bbh", "pred"]
 
-# Check we're trying to read/write something at least called an mp4 or avi
-
-vidFileRegex = r"(\w+)\.(avi|mp4)$"
-
-if not(re.search(vidFileRegex, sys.argv[1]) and \
-        re.search(vidFileRegex, sys.argv[2])):
-    print("Invalid input and/or output file format")
-    quit()
-
-
-fileind = 0
-for infile in sys.argv[3:]:
-
+def readFile(indata):
+    
     print(os.path.getsize(infile))
     if(os.path.getsize(infile) ==0):
-        print(infile + " is size 0; skipping")
-        break
-
+        print(infile + " is size 0; aborting")
+        sys.exit()
 
     with open(infile) as f:
         print("reading file "  + infile)
@@ -106,7 +94,7 @@ for infile in sys.argv[3:]:
 
     if(num_cols == 16 or num_cols ==17):
         print("Reading wide data")
-        bbox_collection[fileind]=pd.read_csv(infile, sep = ",", header = 0, index_col = 0,
+        outdata=pd.read_csv(infile, sep = ",", header = 0, index_col = 0,
                    dtype = {'Frame':np.int32},
                    names = fullformat_names[:num_cols])
 
@@ -115,13 +103,30 @@ for infile in sys.argv[3:]:
         narrowdata=pd.read_csv(infile, sep = ",", header = None, index_col = 0,
                dtype = {'Frame':np.int32},
                names = narrowformat_names[:num_cols])
-        bbox_collection[fileind]=convertToWide(narrowdata)
+        outdata=convertToWide(narrowdata)
 
     # Add dummy prediction column if it doesn't exist
-    if 'pred' not in bbox_collection[fileind]:
+    if 'pred' not in outdata:
         print("Adding dummy pred column for " + infile)
-        bbox_collection[fileind]["pred"] = 1
+        outdata["pred"] = 1
+    return outdata
 
+###############################################
+
+# Check we're trying to read/write something at least called an mp4 or avi
+
+vidFileRegex = r"(\w+)\.(avi|mp4)$"
+
+if not(re.search(vidFileRegex, sys.argv[1]) and \
+        re.search(vidFileRegex, sys.argv[2])):
+    print("Invalid input and/or output file format")
+    quit()
+
+
+fileind = 0
+for infile in sys.argv[3:]:
+
+    bbox_collection[fileind] = readFile(infile)
     # Recode predicions to give sensible colour intensity ranges
     # Want full brightness if pred is the same for all frameskip
     maxclass = max(bbox_collection[fileind]["pred"])
