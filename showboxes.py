@@ -16,6 +16,7 @@ from sklearn.preprocessing import MinMaxScaler
 # inputcsv arg 3+
 
 bbox_collection = {}
+barchartOffsets = [100, 300]
 
 # http://stackoverflow.com/questions/876853/generating-color-ranges-in-python
 Nfiles = len(sys.argv) - 3
@@ -232,8 +233,8 @@ while got:
             if frame in bbox_collection[bbk].index:
                 actrow = bbox_collection[bbk].loc[frame]
                 for i in range(1,4):
-                    p1 = (100 + 20*i, 100)
-                    p2 = (110 + 20*i, 100 + int(100 * actrow['c' + str(i)]))
+                    p1 = (barchartOffsets[bbk] + 20*i, 100)
+                    p2 = (barchartOffsets[bbk] + 10 + 20*i, 100 + int(100 * actrow['c' + str(i)]))
                     cv2.rectangle(img, p1, p2, 
                         colours[bbk], thickness = cv2.cv.CV_FILLED)
         else:
