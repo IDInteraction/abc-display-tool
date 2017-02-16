@@ -9,7 +9,7 @@ import pandas as pd
 import itertools
 import re
 import colorsys
-
+from sklearn.preprocessing import MinMaxScaler
 
 # inputvideo
 # output video
@@ -68,6 +68,8 @@ fullformat_names = ["Frame", "time", "actpt", "bbcx", "bbcy",
 
 narrowformat_names = ["Frame", "bbx", "bby", "bbw", "bbh", "pred"]
 
+analogue_names = ["Frame", "c1", "c2", "c3"]
+
 def readFile(indata):
     print(os.path.getsize(infile))
     if(os.path.getsize(infile) ==0):
@@ -88,54 +90,83 @@ def readFile(indata):
         print "Detected header row"
         hasHeaderRow = True
 
+    if not hasHeaderRow: # Assume legacy bbox file
+        print str(num_cols) + " columns in file"
+        # TODO deal with csv files with row numbers; will throw off prediction test
+        if(num_cols == 17 or num_cols == 6):
+            print("have predictions")
 
-    print str(num_cols) + " columns in file"
-    # TODO deal with csv files with row numbers; will throw off prediction test
-    if(num_cols == 17 or num_cols == 6):
-        print("have predictions")
+        elif(num_cols ==16 or num_cols == 5):
+            print("no predictions")
+        else:
+            print("Unknown input format")
+            quit()
 
-    elif(num_cols ==16 or num_cols == 5):
-        print("no predictions")
-    else:
-        print("Unknown input format")
-        quit()
-
-    if(num_cols == 16 or num_cols ==17):
-        print("Reading wide data")
-        if not hasHeaderRow:
+        if(num_cols == 16 or num_cols ==17):
+            print("Reading wide data")
             outdata=pd.read_csv(infile, sep = ",", header = 0, index_col = 0,
                        dtype = {'Frame':np.int32},
                        names = fullformat_names[:num_cols])
+
         else:
-            outdata = pd.read_csv(infile, sep = ",", index_col = 0,
-                    dtype = {'Frame':np.int32})
-
-
-    else:
-        print("Reading narrow data")
-        if not hasHeaderRow:
+            print("Reading narrow data")
             narrowdata=pd.read_csv(infile, sep = ",", header = None, index_col = 0,
                    dtype = {'Frame':np.int32},
                    names = narrowformat_names[:num_cols])
-        else:
-            narrowdata = pd.read_csv(infile, sep = ",", index_col = 0,
-                    dtype = {'Frame':np.int32})
 
-        datacols = set(list(narrowdata))
-        datacols.add("Frame") # Since index column
-        if datacols == set(narrowformat_names[:num_cols]):
-            print "Bounding box format data found; converting to wide"
+            print "converting to wide"
             outdata=convertToWide(narrowdata)
-        else:
-            print "Other format data found; not converting to wide"
-            outdata = narrowdata
+            
+        trackingType = "bbox"
 
-    # Add dummy prediction column if it doesn't exist
-    if 'pred' not in outdata:
-        print("Adding dummy pred column for " + infile)
-        outdata["pred"] = 1
+    else: # We have a header row
+        outdata = pd.read_csv(infile, sep = ",", index_col = 0, dtype = {'Frame':np.int32})
+        # Check whether we have bbox format data
+        colnames = set(list(outdata))
+        colnames.add("Frame")
+
+        if colnames.issuperset(["bbx", "bby", "bbw", "bbh"]):
+            print "Converting to wide"
+            outdata = convertToWide(outdata)
+
+    if getTrackType(outdata) == "bbox":
+        # Add dummy prediction column if it doesn't exist
+        if 'pred' not in outdata:
+            print("Adding dummy pred column for " + infile)
+            outdata["pred"] = 1
+        # Recode predicions to give sensible colour intensity ranges
+        # Want full brightness if pred is the same for all frameskip
+        maxclass = max(outdata["pred"])
+        minclass = min(outdata["pred"])
+        if maxclass == minclass:
+            outdata["colourscale"] = 1.0
+        else:
+            numclasses= maxclass - minclass
+            outdata["colourscale"] = outdata["pred"]/numclasses
+            if(min(outdata["colourscale"]) < 0 or \
+                max(outdata["colourscale"]) > 1):
+                print("Colour scaling went wrong; check numbering of preciction classes")
+                quit()
+
+    if getTrackType(outdata) == "analogue":
+        print "Scaling analogue values"
+        scaler = MinMaxScaler()
+        outdata = pd.DataFrame(scaler.fit_transform(outdata), columns = outdata.columns)
+
     return outdata
 
+
+def getTrackType(trackdata):
+    colnames = set(list(trackdata))
+    colnames.add("Frame")
+    if colnames.issuperset(["bb1x", "bb1y", "bb2x", "bb2y", "bb3x", "bb3y", "bb4x", "bb4y"]): 
+        return "bbox"
+    elif colnames == set(analogue_names):
+        return "analogue"
+    else:
+        print "Invalid tracking data type"
+        sys.exit()
+        
 ###############################################
 
 # Check we're trying to read/write something at least called an mp4 or avi
@@ -152,33 +183,9 @@ fileind = 0
 for infile in sys.argv[3:]:
 
     bbox_collection[fileind] = readFile(infile)
-    # Recode predicions to give sensible colour intensity ranges
-    # Want full brightness if pred is the same for all frameskip
-    maxclass = max(bbox_collection[fileind]["pred"])
-    minclass = min(bbox_collection[fileind]["pred"])
-    if maxclass == minclass:
-        bbox_collection[fileind]["colourscale"] = 1.0
-    else:
-        numclasses= maxclass - minclass
-        bbox_collection[fileind]["colourscale"] = bbox_collection[fileind]["pred"]/numclasses
-        if(min(bbox_collection[fileind]["colourscale"]) < 0 or \
-            max(bbox_collection[fileind]["colourscale"]) > 1):
-            print("Colour scaling went wrong; check numbering of preciction classes")
-            quit()
-
-
     fileind = fileind + 1
 
 
-
-#for bbk in bbox_collection.keys():
-    #print bbox_collection[bbk].index
-#    print bbox_collection[bbk]
-
-#quit()
-
-
-#WINDOW_NAME = 'Playback'
 
 video = cv2.VideoCapture(sys.argv[1])
 
@@ -206,19 +213,33 @@ while got:
 
 
     for bbk in bbox_collection.keys():
-        if frame in bbox_collection[bbk].index:
-            sys.stdout.write(" " +  str(bbk))
-            actbb = bbox_collection[bbk].loc[frame]
+        tracktype = getTrackType(bbox_collection[bbk])
+        if tracktype  == "bbox":
+            if frame in bbox_collection[bbk].index:
+                sys.stdout.write(" " +  str(bbk))
 
-            #Need to draw rectangle as four lines, since may not have rotation = 0
-            for i in range(1,5):
-                j = (i % 4) + 1
-                p1 = (actbb['bb' + str(i) + 'x'], actbb['bb' + str(i) + 'y'])
-                p2 = (actbb['bb' + str(j) + 'x'], actbb['bb' + str(j) + 'y'])
-                p1 = tuple(map(int, p1))
-                p2 = tuple(map(int, p2))
-                cv2.line(img, p1, p2,  color =scaleColour(colours[bbk], actbb["colourscale"]),  \
-                     thickness = 2)
+                actbb = bbox_collection[bbk].loc[frame]
+
+                #Need to draw rectangle as four lines, since may not have rotation = 0
+                for i in range(1,5):
+                    j = (i % 4) + 1
+                    p1 = (actbb['bb' + str(i) + 'x'], actbb['bb' + str(i) + 'y'])
+                    p2 = (actbb['bb' + str(j) + 'x'], actbb['bb' + str(j) + 'y'])
+                    p1 = tuple(map(int, p1))
+                    p2 = tuple(map(int, p2))
+                    cv2.line(img, p1, p2,  color =scaleColour(colours[bbk], actbb["colourscale"]), thickness = 2)
+        elif tracktype == "analogue":
+            if frame in bbox_collection[bbk].index:
+                actrow = bbox_collection[bbk].loc[frame]
+                for i in range(1,4):
+                    p1 = (100 + 20*i, 100)
+                    p2 = (110 + 20*i, 100 + int(100 * actrow['c' + str(i)]))
+                    cv2.rectangle(img, p1, p2, 
+                        colours[bbk], thickness = cv2.cv.CV_FILLED)
+        else:
+            print "Invalid type of tracking file"
+            sys.exit()
+    
 
 
 
