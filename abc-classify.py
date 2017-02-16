@@ -251,7 +251,7 @@ parser.add_argument("--videofile",
         help = "The input video file to classify")
 parser.add_argument("--trackerfile",
         dest = "trackerfile", type = str, required = True,
-        help = "The data from some object tracking software.  Currently only OpenFace data are supported")
+        help = "The data from some object tracking software.  Currently only OpenFace and CppMT data are supported")
 parser.add_argument("--startframe", type = int, required = False,
         help = "The frame of the video to start classifcation at.  Defaults to start of video")
 parser.add_argument("--endframe",
@@ -294,6 +294,11 @@ parser.add_argument("--participantcode",
         dest = "participantcode", type = str, required = False,
         help = "The participant code to output in the summaryfile")
 
+parser.add_argument("--noaccuracyprobs",
+        dest = "noaccuracyprobs", action="store_true",
+        help = "Whether to output the (slow to calculate) p accuracy > x statistics")
+parser.set_defaults(noaccuracyprobs = False)
+
 parser.add_argument("--includegt",
         dest = "includegt", action = "store_true",
         help = "Whether to include ground truth frames when outputting predictions")
@@ -313,6 +318,11 @@ if (not args.entergt) and args.extgt is None:
 
 if args.loadrngstate is not None and args.saverngstate is not None:
     print "Can only save OR load rng state"
+    sys.exit()
+
+if args.summaryfile is not None and args.entergt:
+    print "Must use external ground truth file if outputting summary stats"
+    sys.exit()
 
 np.random.seed()
 state = np.random.get_state()
@@ -476,16 +486,16 @@ else:
                     groundtruth[:trainedframescount],
                     trackingData.loc[trainingframes[:trainedframescount]])
     print("Crossval Accuracy: Mean: %0.3f, Std: %0.3f" % (meanAc, stdAc))
-
-    print "Probability accuracy at least:"
-    probs = getShuffledSuccessProbs(tree,
+    if args.noaccuracyprobs == True:
+        print "Probability accuracy at least:"
+        probs = getShuffledSuccessProbs(tree,
         groundtruth[:trainedframescount],
         trackingData.loc[trainingframes[:trainedframescount]])
-    print probs.mean()
+        print probs.mean()
     
 
-    for p in [0.8, 0.9, 0.95, 0.99]:
-        print "probability accuracy > " + str(p) + ": " + str(testprob(probs, p))
+        for p in [0.8, 0.9, 0.95, 0.99]:
+            print "probability accuracy > " + str(p) + ": " + str(testprob(probs, p))
 
 
     if args.outfile is not None:
@@ -510,7 +520,7 @@ else:
                     str(endVideoFrame) + "," + 
                     str(getAccuracyCrossVal(tree,
                         groundtruth[:trainedframescount],
-                        trackingData.loc[trainingframes[:trainedframescount]])[1]) + "," +
+                        trackingData.loc[trainingframes[:trainedframescount]])[0]) + "," +
                     str(getAccuracy(tree,
                         externalGT.loc[trainingframes[trainedframescount:],
                             "state"],
