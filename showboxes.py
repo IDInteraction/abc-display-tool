@@ -69,7 +69,6 @@ fullformat_names = ["Frame", "time", "actpt", "bbcx", "bbcy",
 narrowformat_names = ["Frame", "bbx", "bby", "bbw", "bbh", "pred"]
 
 def readFile(indata):
-    
     print(os.path.getsize(infile))
     if(os.path.getsize(infile) ==0):
         print(infile + " is size 0; aborting")
@@ -80,6 +79,15 @@ def readFile(indata):
         reader = csv.reader(f, delimiter=',', skipinitialspace=True)
         first_row = next(reader)
         num_cols = len(first_row)
+    # Test if we have digits in the first row
+    if len([s for s in first_row if s.isdigit()]) != 0:
+        print "No header row detected"
+        print "Ensure file contains appropriately named columns:"
+        hasHeaderRow = False 
+    else:
+        print "Detected header row"
+        hasHeaderRow = True
+
 
     print str(num_cols) + " columns in file"
     # TODO deal with csv files with row numbers; will throw off prediction test
@@ -94,16 +102,33 @@ def readFile(indata):
 
     if(num_cols == 16 or num_cols ==17):
         print("Reading wide data")
-        outdata=pd.read_csv(infile, sep = ",", header = 0, index_col = 0,
-                   dtype = {'Frame':np.int32},
-                   names = fullformat_names[:num_cols])
+        if not hasHeaderRow:
+            outdata=pd.read_csv(infile, sep = ",", header = 0, index_col = 0,
+                       dtype = {'Frame':np.int32},
+                       names = fullformat_names[:num_cols])
+        else:
+            outdata = pd.read_csv(infile, sep = ",", index_col = 0,
+                    dtype = {'Frame':np.int32})
+
 
     else:
         print("Reading narrow data")
-        narrowdata=pd.read_csv(infile, sep = ",", header = None, index_col = 0,
-               dtype = {'Frame':np.int32},
-               names = narrowformat_names[:num_cols])
-        outdata=convertToWide(narrowdata)
+        if not hasHeaderRow:
+            narrowdata=pd.read_csv(infile, sep = ",", header = None, index_col = 0,
+                   dtype = {'Frame':np.int32},
+                   names = narrowformat_names[:num_cols])
+        else:
+            narrowdata = pd.read_csv(infile, sep = ",", index_col = 0,
+                    dtype = {'Frame':np.int32})
+
+        datacols = set(list(narrowdata))
+        datacols.add("Frame") # Since index column
+        if datacols == set(narrowformat_names[:num_cols]):
+            print "Bounding box format data found; converting to wide"
+            outdata=convertToWide(narrowdata)
+        else:
+            print "Other format data found; not converting to wide"
+            outdata = narrowdata
 
     # Add dummy prediction column if it doesn't exist
     if 'pred' not in outdata:
