@@ -247,7 +247,7 @@ def playbackPredictions(vidsource, predictions, startframe, endframe,
 parser = argparse.ArgumentParser(description = "Interactively classify behaviours in a video.  For each frame enter a numeric behaviour state.  Press c to classify based on the frames classified so far.  Accuracy is evaluated with cross validation.  Can optionally use an external ground truth file for classification and/or verification.")
 
 parser.add_argument("--videofile",
-        dest = "videofile", type = str, required = True,
+        dest = "videofile", type = str, required = False,
         help = "The input video file to classify")
 parser.add_argument("--trackerfile",
         dest = "trackerfile", type = str, required = True,
@@ -307,6 +307,9 @@ parser.set_defaults(includegt=False)
 
 args = parser.parse_args()
 
+if args.videofile is None and args.extgt is None:
+    print "A video file is required if not usin an external ground truth file"
+    sys.exit()
 
 if args.summaryfile is not None and args.participantcode is None:
     print "A participant code must be provided if outputting summary data"
@@ -356,10 +359,11 @@ else:
     startVideoFrame = videoFile.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)
 
 if args.endframe is not None:
-    lastframe = videoFile.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT)
-    if lastframe < args.endframe:
-        print "Endframe is after the end of the video"
-        sys.exit()
+    if args.videofile is not None:
+        lastframe = videoFile.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT)
+        if lastframe < args.endframe:
+            print "Endframe is after the end of the video"
+            sys.exit()
     endVideoFrame =  args.endframe
 else:
     endVideoFrame= videoFile.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT)
