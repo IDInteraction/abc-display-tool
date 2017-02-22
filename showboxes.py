@@ -152,8 +152,7 @@ def readFile(indata):
     if getTrackType(outdata) == "analogue":
         print "Scaling analogue values"
         scaler = MinMaxScaler()
-        outdata = pd.DataFrame(scaler.fit_transform(outdata), columns = outdata.columns)
-
+        outdata = pd.DataFrame(scaler.fit_transform(outdata), columns = outdata.columns, index = outdata.index)
     return outdata
 
 
@@ -229,6 +228,9 @@ while got:
                     p1 = tuple(map(int, p1))
                     p2 = tuple(map(int, p2))
                     cv2.line(img, p1, p2,  color =scaleColour(colours[bbk], actbb["colourscale"]), thickness = 2)
+
+
+
         elif tracktype == "analogue":
             if frame in bbox_collection[bbk].index:
                 actrow = bbox_collection[bbk].loc[frame]
@@ -237,6 +239,7 @@ while got:
                     p2 = (barchartOffsets[bbk] + 10 + 20*i, 100 + int(100 * actrow['c' + str(i)]))
                     cv2.rectangle(img, p1, p2, 
                         colours[bbk], thickness = cv2.cv.CV_FILLED)
+
         else:
             print "Invalid type of tracking file"
             sys.exit()
