@@ -7,8 +7,8 @@ import pandas as pd
 import argparse
 import cv2
 import re
-from sklearn.tree import DecisionTreeClassifier 
-from sklearn.model_selection import cross_val_score 
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import ShuffleSplit
 from sklearn.model_selection import KFold
 from sklearn import preprocessing
@@ -26,9 +26,9 @@ def loadTrackingData(infile,
         # Remove spurious columns based on filetype
         if set(['timestamp', 'gaze_0_x']).issubset(indata.columns.values):
             print("OpenFace input detected")
-            AUCols = [x.find("AU") == 0 for x in indata.columns.values] 
+            AUCols = [x.find("AU") == 0 for x in indata.columns.values]
             ControlCols = [True] * 3 + [False] * (indata.columns.values.size - 3)
-            mask = [x|y for (x,y) in zip(AUCols, ControlCols)] 
+            mask = [x|y for (x,y) in zip(AUCols, ControlCols)]
 
             indata.drop(indata.columns[mask], axis = 1, inplace = True)
         elif set(['Timestamp (ms)',
@@ -94,17 +94,17 @@ def getMultiVideoFrame(videosrc, frameNumber):
     vis[:h, w:2*w, :3] = mainframe
     vis[:h, 2*w:3*w, :3] = nextframe
 
-    return vis 
+    return vis
 
 def runClassifier(traininggroundtruth, trainingtrackingdata):
 
-    tree = DecisionTreeClassifier() 
+    tree = DecisionTreeClassifier()
 
     trainedframescount  = len(traininggroundtruth)
     if len(trainingtrackingdata.index) != trainedframescount:
         print "Size mismatch"
         sys.exit()
-    print "Classifying with " + str(trainedframescount) + " frames" 
+    print "Classifying with " + str(trainedframescount) + " frames"
     tree.fit(trainingtrackingdata, traininggroundtruth)
 
     return tree
@@ -122,7 +122,7 @@ def getPredictions(inputtree, alltrackingdata, evaluationframes, groundtruthfram
         evaluationframes = np.append(evaluationframes, groundtruthframes)
 
     predicted = pd.Series( predictions,  index = evaluationframes)
-    
+
     return predicted
 
 
@@ -144,24 +144,24 @@ def getAccuracyCrossVal(inputtree, evaluationgroundtruth,
         evaluationtrackingdata):
 
     try:
-        scores = cross_val_score(inputtree,  evaluationtrackingdata, 
+        scores = cross_val_score(inputtree,  evaluationtrackingdata,
                 evaluationgroundtruth)
         return  (scores.mean(), scores.std())
     except ValueError:
         print "Cross val accuracy calculation failed"
-        return (-1, -1) 
+        return (-1, -1)
 
 def getShuffledSuccessProbs(inputtree, evaluationgroundtruth, evaluationtrackingdata):
-    
+
     crossvalidation = ShuffleSplit(n_splits = 1000, test_size = 0.5)
 
     try:
-        scores = cross_val_score(inputtree,  evaluationtrackingdata, 
+        scores = cross_val_score(inputtree,  evaluationtrackingdata,
                 evaluationgroundtruth, cv=crossvalidation)
         return scores
     except ValueError:
         print "Cross val accuracy calculation failed"
-        return (-1, -1) 
+        return (-1, -1)
 
 
 def testprob(probs, threshold):
@@ -169,7 +169,7 @@ def testprob(probs, threshold):
 
 def getAccuracy(inputtree, groundtruth, trackingdata):
     predicted = inputtree.predict(trackingdata)
-    
+
     accuracy = metrics.accuracy_score(groundtruth, predicted)
 
     return accuracy
@@ -180,7 +180,7 @@ def onChange(trackbarValue):
 
 def playbackPredictions(vidsource, predictions, startframe, endframe,
         bbox = (225,125,150,150)):
-    
+
 
     if endframe - startframe != len(predictions):
             print "Video period of interest is " + chr(endframe - startframe) + " frames, but have predictions for " + chr(len(predictions)) + " frames"
@@ -198,7 +198,7 @@ def playbackPredictions(vidsource, predictions, startframe, endframe,
         ind = ind + 1
 
     cv2.namedWindow("Playback")
-    
+
     cv2.createTrackbar("position", "Playback", startframe, endframe - 1, onChange)
 
 
@@ -214,11 +214,11 @@ def playbackPredictions(vidsource, predictions, startframe, endframe,
 
         f = cv2.getTrackbarPos("position", "Playback")
         vidsource.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, f)
-        try: 
-            thispred = predictions.loc[f] 
+        try:
+            thispred = predictions.loc[f]
             cv2.rectangle(img, (bbox[0], bbox[1]),
                 (bbox[0] + bbox[2], bbox[1] + bbox[3]),
-                 color = colours[thispred], 
+                 color = colours[thispred],
                   thickness = 2 )
         except KeyError: # Didn't have prediction for frame
             pass
@@ -261,7 +261,7 @@ parser.add_argument("--entergt",
         dest = "entergt", action="store_true",
         help = "Whether to interactively enter ground truth data.  For each frame enter a numeric state, c to classify or u to undo the previous frame")
 
-parser.add_argument("--useexternalgt", 
+parser.add_argument("--useexternalgt",
         dest = "entergt", action='store_false',
         help = "Whether to use the externally specified ground truth file for classification, instead of classifying interactivel")
 parser.add_argument("--externaltrainingframes", type = int, required = False,
@@ -276,7 +276,7 @@ parser.set_defaults(shuffle=True)
 
 parser.add_argument("--outfile",
         dest="outfile", type = str, required = False,
-        help = "The filename to output classifier performance on the data that haven't been used to construct the classifier") 
+        help = "The filename to output classifier performance on the data that haven't been used to construct the classifier")
 
 parser.add_argument("--loadrngstate",
         dest="loadrngstate", type=str, required = False,
@@ -370,10 +370,17 @@ print "Tracking between " + str(startVideoFrame) + " and " + str(endVideoFrame)
 
 trackingData = loadTrackingData(args.trackerfile)
 
+
 # We handle the training period by shuffling all the frames in the video
 # We can then work our way through the list as required, to avoid re-drawing the sample
 # and risking classifying the same frame twice etc.
 trainingframes = range(startVideoFrame, endVideoFrame)
+
+if not set(trainingframes).issubset(trackingData.index):
+    print "Don't have tracking data for each frame"
+    quit()
+    
+
 if args.shuffle:
     print "Randomising frames"
     # Must use np.random.shuffle for reproducibility, not shuffle since we have *only* set
@@ -405,16 +412,16 @@ if args.entergt:
             img = getMultiVideoFrame(videoFile, thisframe)
             getmulti = False
         else:
-            img = getVideoFrame(videoFile,thisframe) 
- 
+            img = getVideoFrame(videoFile,thisframe)
+
         cv2.imshow("Classification", img)
- 
-        key =  cv2.waitKey(0) 
+
+        key =  cv2.waitKey(0)
         if(chr(key) == 'c'):
             tree = runClassifier(groundtruth[:(trainedframescount)],
                     trackingData.loc[trainingframes[:(trainedframescount)]])
 
-            (meanAc, stdAc)  = getAccuracyCrossVal(tree, 
+            (meanAc, stdAc)  = getAccuracyCrossVal(tree,
                     groundtruth[:trainedframescount],
                     trackingData.loc[trainingframes[:trainedframescount]])
             print("Crossval Accuracy: Mean: %0.3f, Std: %0.3f" % (meanAc, stdAc))
@@ -424,11 +431,11 @@ if args.entergt:
 
                 predicted = tree.predict(trackingData.loc[trainingframes[trainedframescount:]])
                 evaluationgroundtruth = externalGT.loc[trainingframes[trainedframescount:]]
-    
+
                 print(metrics.classification_report(evaluationgroundtruth, predicted))
                 print(metrics.confusion_matrix(evaluationgroundtruth, predicted))
                 print(metrics.accuracy_score(evaluationgroundtruth, predicted))
-    
+
 
             if args.outfile is not None:
                 savePredictions(tree,  trackingData,
@@ -459,20 +466,20 @@ if args.entergt:
             tree = runClassifier(groundtruth[:(trainedframescount)],
                     trackingData.loc[trainingframes[:(trainedframescount)]])
 
-            predictions = getPredictions(tree, trackingData, 
+            predictions = getPredictions(tree, trackingData,
                     trainingframes[trainedframescount:],
                     groundtruthframes = trainingframes[:trainedframescount],
                     groundtruth =  groundtruth)
             playbackPredictions(videoFile, predictions, startVideoFrame, endVideoFrame)
             cv2.namedWindow("Classification")
-        else: 
+        else:
             try:
                 groundtruth.append(int(chr(key)))
                 if args.extgt is not None:
                     print "External GT was: " + str(int(externalGT.loc[thisframe]))
             except ValueError:
                 print "Invalid behaviour state entered; must be numeric"
-        trainedframescount = len(groundtruth) 
+        trainedframescount = len(groundtruth)
         print str(trainedframescount) + " frames classified"
         print pd.Series(groundtruth).value_counts()
 
@@ -488,7 +495,7 @@ else:
     tree = runClassifier(groundtruth[:(trainedframescount)],
                   trackingData.loc[trainingframes[:(trainedframescount)]])
 
-    (meanAc, stdAc)  = getAccuracyCrossVal(tree, 
+    (meanAc, stdAc)  = getAccuracyCrossVal(tree,
                     groundtruth[:trainedframescount],
                     trackingData.loc[trainingframes[:trainedframescount]])
     print("Crossval Accuracy: Mean: %0.3f, Std: %0.3f" % (meanAc, stdAc))
@@ -498,7 +505,7 @@ else:
         groundtruth[:trainedframescount],
         trackingData.loc[trainingframes[:trainedframescount]])
         print probs.mean()
-    
+
 
         for p in [0.8, 0.9, 0.95, 0.99]:
             print "probability accuracy > " + str(p) + ": " + str(testprob(probs, p))
@@ -514,7 +521,7 @@ else:
             savePredictions(tree,  trackingData, trainingframes[trainedframescount:],
                     args.outfile)
 
- 
+
 # TODO - code repetition with accuracy calc
     if args.summaryfile is not None:
         print "Outputting summary"
@@ -523,7 +530,7 @@ else:
                 summaryfile.write(args.participantcode + "," +
                     str(trainedframescount) + "," +
                     str(startVideoFrame) + "," +
-                    str(endVideoFrame) + "," + 
+                    str(endVideoFrame) + "," +
                     str(getAccuracyCrossVal(tree,
                         groundtruth[:trainedframescount],
                         trackingData.loc[trainingframes[:trainedframescount]])[0]) + "," +
@@ -532,6 +539,3 @@ else:
                             "state"],
                         trackingData.loc[trainingframes[trainedframescount:]]))
                      + "\n")
-                
-
-
