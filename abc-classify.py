@@ -105,7 +105,6 @@ def runClassifier(traininggroundtruth, trainingtrackingdata):
         print "Size mismatch"
         sys.exit()
     print "Classifying with " + str(trainedframescount) + " frames" 
-
     tree.fit(trainingtrackingdata, traininggroundtruth)
 
     return tree
@@ -169,7 +168,6 @@ def testprob(probs, threshold):
     return sum(probs >= threshold)/float(len(probs))
 
 def getAccuracy(inputtree, groundtruth, trackingdata):
-
     predicted = inputtree.predict(trackingdata)
     
     accuracy = metrics.accuracy_score(groundtruth, predicted)
@@ -387,6 +385,10 @@ else:
 if args.extgt is not None:
     print "Loading external ground-truth file"
     externalGT = loadExternalGroundTruth(args.extgt)
+
+    if len(trainingframes) > len(externalGT):
+        print "External ground truth file has too few frames for training"
+        quit()
 
 
 trainedframescount = 0
