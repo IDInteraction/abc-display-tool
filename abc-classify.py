@@ -53,7 +53,6 @@ def loadExternalGroundTruth(infile, format = "checkfile"):
             names = ["frame", "x", "y", "w", "h", "state"])
 
     indata.drop(["x","y","w","h"], axis=1 ,inplace = True)
-
     return indata
 
 
@@ -374,8 +373,7 @@ trackingData = loadTrackingData(args.trackerfile)
 # We handle the training period by shuffling all the frames in the video
 # We can then work our way through the list as required, to avoid re-drawing the sample
 # and risking classifying the same frame twice etc.
-trainingframes = range(startVideoFrame, endVideoFrame)
-
+trainingframes = range(startVideoFrame, endVideoFrame+1)
 if not set(trainingframes).issubset(trackingData.index):
     print "Don't have tracking data for each frame"
     quit()
