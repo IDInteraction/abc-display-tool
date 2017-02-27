@@ -147,7 +147,7 @@ if args.skipfile and not args.event:
     print "An event must be specified when outputting a skipfile"
     quit()
 
-if args.skipfile is None and args.outfile is None:
+if args.skipfile is None and args.outputfile is None:
     print "Skipfile or outfile must be specified"
     quit()
 
