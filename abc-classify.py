@@ -1,5 +1,5 @@
 #!/usr/bin/python
-
+import csv
 import os
 import sys
 import numpy as np
@@ -48,10 +48,16 @@ def loadExternalGroundTruth(infile, format = "checkfile"):
     if format != "checkfile":
         print "Only checkfiles implemented"
 #        sys.exit()
+    with open(infile, 'rb') as csvfile:
+        hasheader  = csv.Sniffer().has_header(csvfile.read(2048))
+        
 
-    indata = pd.read_csv(infile, index_col=0,
+    if hasheader:
+        indata = pd.read_csv(infile, index_col=0, header = 0,
             names = ["frame", "x", "y", "w", "h", "state"])
-
+    else:
+        indata = pd.read_csv(infile, index_col=0,
+            names = ["frame", "x", "y", "w", "h", "state"])
     indata.drop(["x","y","w","h"], axis=1 ,inplace = True)
     return indata
 
@@ -168,6 +174,7 @@ def testprob(probs, threshold):
 
 def getAccuracy(inputtree, groundtruth, trackingdata):
     predicted = inputtree.predict(trackingdata)
+
 
     accuracy = metrics.accuracy_score(groundtruth, predicted)
 
@@ -393,6 +400,9 @@ if args.extgt is not None:
 
     if len(trainingframes) > len(externalGT):
         print "External ground truth file has too few frames for training"
+        quit()
+    if not set(range(args.startframe, args.endframe+1)).issubset(externalGT.index):
+        print "External ground truth not provided for all frames in range"
         quit()
 
 
