@@ -65,8 +65,7 @@ def loadAttentionFile(infile, participant):
     # Drop missing annotations
     attention = attention[attention['annotation'].notnull()]
 
-    attention['attTransMidss'] = attention['attTransStartss'] + (attention['attTransEndss'] - 
-            attention['attTransStartss'])
+    attention['attTransMidss'] = attention['attTransStartss'] + (attention['attTransEndss'] - attention['attTransStartss'])/2.0
 
     return attention
 
@@ -195,7 +194,12 @@ else:
 
     if not math.isnan(eventOfInterest['timestamp']):
         print "Extracting event directly from time"
-        eventframe = int(eventOfInterest['timestamp'] * fps)
+        eventtimeframe = eventOfInterest['timestamp']
+        if len(eventtimeframe) != 1:
+            print "Incorrect number of events found"
+            quit()
+        eventtime = eventtimeframe.iloc[0]
+        eventframe = int(eventtime * fps)
     else:
         print "Extracting event via attention file"
 
@@ -207,7 +211,19 @@ else:
             quit()
 
         eventtime = eventrow['attTransMidss'].iloc[0]
-        eventframe = int(eventtime * fps)
+
+    # Load the attention to check we've not overrun the end
+    attention = loadAttention(args.attentionfile, args.participant)
+
+    maxencodedattention  =  max(attention['attTransMidss'])
+    print "Max encoded attention:", maxencodedattention
+    print "Event occured at:", eventtime
+    if maxencodedattention <= eventtime:
+        print "WARNING: Event is after ground truth file"
+        print "Setting to last ground truth attention"
+        eventtime = maxencodedattention
+
+    eventframe = int(eventtime * fps)
 
     outdata = pd.DataFrame({"frame": eventframe,
 	    "bbx": 150,
@@ -218,6 +234,9 @@ else:
 	    columns = ["frame", "bbx", "bby", "bbw", "bbh", "pred"],
             index = [eventframe])
 
+# Frames are 1 indexed in abc-classify:
+
+outdata["frame"] = outdata["frame"] + 1
 outdata.to_csv(args.outputfile, index = False)
 
 
