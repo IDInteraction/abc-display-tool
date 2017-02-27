@@ -121,7 +121,7 @@ parser.add_argument("--attentionfile",
         help = "The attention file to convert")
 
 parser.add_argument("--outputfile",
-        dest = "outputfile", type = str, required = True,
+        dest = "outputfile", type = str, required = False,
         help = "The output file")
 
 
@@ -137,8 +137,20 @@ parser.add_argument("--externaleventfile",
         dest = "externaleventfile", type = str, required = False,
         help = "file mapping the long annotation for each participant to a standardised annotation.  May also contain additional timestamps for events that were not recorded in the attention file")
 
-
+parser.add_argument("--skipfile",
+        dest = "skipfile", type = str, required = False,
+        help = "If specified, program will *only* output a skipfile in a format suitable for the CppMT object tracking pipeline")
 args = parser.parse_args()
+
+
+if args.skipfile and not args.event:
+    print "An event must be specified when outputting a skipfile"
+    quit()
+
+if args.skipfile is None and args.outfile is None:
+    print "Skipfile or outfile must be specified"
+    quit()
+
 
 if args.event is None:
     attention = loadAttention(args.attentionfile, args.participant)
@@ -237,6 +249,13 @@ else:
 # Frames are 1 indexed in abc-classify:
 
 outdata["frame"] = outdata["frame"] + 1
-outdata.to_csv(args.outputfile, index = False)
+
+if args.skipfile is not None:
+    print "Outputting skipfile"
+    with open(args.skipfile, "w") as f:
+        f.write(str(int(eventtime * 1000)))
+
+else:
+    outdata.to_csv(args.outputfile, index = False)
 
 
