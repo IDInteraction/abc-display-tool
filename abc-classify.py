@@ -288,12 +288,9 @@ parser.add_argument("--outfile",
         dest="outfile", type = str, required = False,
         help = "The filename to output classifier performance on the data that haven't been used to construct the classifier")
 
-parser.add_argument("--loadrngstate",
-        dest="loadrngstate", type=str, required = False,
-        help = "Load a random number state file to use for this invocation of the program. NB the treeclassifier uses the random number generator, so only really useful for reproducibilty when running in batch mode")
-parser.add_argument("--saverngstate",
-        dest = "saverngstate", type=str, required = False,
-        help = "Save the random number state at the start of the file.  The inital state is obtained by calling np.random.seed()")
+parser.add_argument("--rngstate",
+        dest="rngstate", type=str, required = False,
+        help = "Load a random number state file, if it exists.  If it does not exist, write the closing rng state to the file.")
 
 parser.add_argument("--summaryfile",
         dest = "summaryfile", type = str, required = False,
@@ -327,27 +324,23 @@ if (not args.entergt) and args.extgt is None:
     print "If not entering ground-truth from video frames, external ground truth must be provided"
     sys.exit()
 
-if args.loadrngstate is not None and args.saverngstate is not None:
-    print "Can only save OR load rng state"
-    sys.exit()
 
 if args.summaryfile is not None and args.entergt:
     print "Must use external ground truth file if outputting summary stats"
     sys.exit()
 
-np.random.seed()
-state = np.random.get_state()
 
-if args.saverngstate is not None:
-    print "saving initial rng state"
-    with open(args.saverngstate, 'wb') as output:
-        pickle.dump(state, output, pickle.HIGHEST_PROTOCOL)
+if args.rngstate is not None:
+    if os.path.isfile(args.rngstate):
+        print "Saved random state exits; loading"
+        with open(args.rngstate, 'rb') as input:
+            state = pickle.load(input)
+        np.random.set_state(state)
+    else:
+        print "Random state file not found - setting"
+        np.random.seed()
+        state = np.random.get_state()
 
-if args.loadrngstate is not None:
-    print "Loading rng state"
-    with open(args.loadrngstate, 'rb') as input:
-        state = pickle.load(input)
-    np.random.set_state(state)
 videoFile = cv2.VideoCapture(args.videofile)
 
 if args.startframe is not None and args.endframe is not None:
@@ -557,4 +550,8 @@ else:
                         trackingData.loc[trainingframes[trainedframescount:]]))
                      + "\n")
 
-
+if args.rngstate is not None:
+    print "Saving final RNG state"
+    state = np.random.get_state()
+    with open(args.rngstate, 'wb') as output:
+        pickle.dump(state, output, pickle.HIGHEST_PROTOCOL)
