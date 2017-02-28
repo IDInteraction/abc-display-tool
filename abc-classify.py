@@ -145,13 +145,17 @@ def savePredictions(inputtree,  alltrackingdata, evaluationframes, filename,
     predframe.to_csv(filename, index=False, columns=[ "frame",
         "x", "y", "w", "h", "attention"], header=False)
 
+
+
 def getAccuracyCrossVal(inputtree, evaluationgroundtruth,
         evaluationtrackingdata):
+
 
     try:
         scores = cross_val_score(inputtree,  evaluationtrackingdata,
                 evaluationgroundtruth)
-        return  (scores.mean(), scores.std())
+        return  (scores.mean(), scores.std(), np.percentile(scores, 2.5),
+                np.percentile(scores, 97.5))
     except ValueError:
         print "Cross val accuracy calculation failed"
         return (-1, -1)
@@ -505,7 +509,7 @@ else:
 
     (meanAc, stdAc)  = getAccuracyCrossVal(tree,
                     groundtruth[:trainedframescount],
-                    trackingData.loc[trainingframes[:trainedframescount]])
+                    trackingData.loc[trainingframes[:trainedframescount]])[:2]
     print("Crossval Accuracy: Mean: %0.3f, Std: %0.3f" % (meanAc, stdAc))
     if args.noaccuracyprobs == True:
         print "Probability accuracy at least:"
@@ -534,16 +538,23 @@ else:
     if args.summaryfile is not None:
         print "Outputting summary"
 
+        (xvmean, xvsd, xvlb, xvub) = getAccuracyCrossVal(tree,
+                        groundtruth[:trainedframescount],
+                        trackingData.loc[trainingframes[:trainedframescount]])
+
         with(open(args.summaryfile, 'a')) as summaryfile:
                 summaryfile.write(args.participantcode + "," +
                     str(trainedframescount) + "," +
                     str(startVideoFrame) + "," +
                     str(endVideoFrame) + "," +
-                    str(getAccuracyCrossVal(tree,
-                        groundtruth[:trainedframescount],
-                        trackingData.loc[trainingframes[:trainedframescount]])[0]) + "," +
+                    str(xvmean) + "," +
+                    str(xvsd) + "," + 
+                    str(xvlb) + "," + 
+                    str(xvub) + "," +
                     str(getAccuracy(tree,
                         externalGT.loc[trainingframes[trainedframescount:],
                             "state"],
                         trackingData.loc[trainingframes[trainedframescount:]]))
                      + "\n")
+
+
