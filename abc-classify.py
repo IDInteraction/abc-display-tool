@@ -152,6 +152,8 @@ def getAccuracyCrossVal(inputtree, evaluationgroundtruth,
 
 
     try:
+        # Since np.random.set_state() isn't thread safe we cannot use
+        # n_jobs > 1 on cross_val_score, since this will break reproducibility
         scores = cross_val_score(inputtree,  evaluationtrackingdata,
                 evaluationgroundtruth)
         return  (scores.mean(), scores.std(), np.percentile(scores, 2.5),
