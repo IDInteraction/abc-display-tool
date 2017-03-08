@@ -13,3 +13,15 @@ Given an input video, outputvideo and 1+ bounding-box/prediction files, this pro
 coordinates given in the bounding-box/prediction file(s), whose colour depends on the predicted state for each frame included in
 the file.  It is used to check the predictions from, e.g. abc-classify.py
 
+
+## Acknowledgements
+
+The IDInteraction Processing Pipelines were developed in the IDInteraction project, funded by the Engineering and Physical Sciences Research Council, UK through grant agreement number [EP/M017133/1][gow].
+
+## Licence
+
+Copyright (c) 2017 The University of Manchester, UK.
+
+Licenced under LGPL version 2.1. See LICENCE for details.
+
+[gow]: http://gow.epsrc.ac.uk/NGBOViewGrant.aspx?GrantRef=EP/M017133/1
