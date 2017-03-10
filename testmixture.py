@@ -7,12 +7,28 @@ import glob
 import loadDepth
 import re
 import math
+import argparse
+
 
 np.random.seed(0)
 
+parser = argparse.ArgumentParser(description = "Load depth data, and fit mixture model")
+
+parser.add_argument("--infolder", dest = "infolder", type = str, required = True)
+parser.add_argument("--outfile", dest = "outfile", type = str, required = True)
+parser.add_argument("--mindepth", dest = "mindepth", type = int, required = False, default = 810)
+parser.add_argument("--maxdepth", dest = "maxdepth", type = int, required = False, default =  1710)
+parser.add_argument("--frameprefix", dest = "frameprefix", type = str, required = True)
+parser.add_argument("--framesuffix", dest = "framesuffix", type = str, required = False, default = ".txt.gz")
+parser.add_argument("--outframefile", dest = "outframefile", type= str, required = False)
 
 
-frames = glob.glob("/media/sf_spot_the_difference/depth/P01/depthDepth*.txt")
+args = parser.parse_args()
+
+framestring = args.infolder + args.frameprefix + "*" + args.framesuffix
+print "using glob:" + framestring
+
+frames = glob.glob(framestring)
 frames.sort()
 
 print "Using frame ", frames[0], " as reference"
@@ -21,8 +37,10 @@ fitframe = loadDepth.loadDepth(frames[0])
 
 # Depths determined from Shiny app; covers as wide a range as possible
 # while capturing participant and table
-mindepth = 810
-maxdepth = 1710
+mindepth = args.mindepth
+maxdepth = args.maxdepth
+
+print "Using depths between " + str(mindepth) + " and " + str(maxdepth)
 
 filterdepth = fitframe[np.logical_and(mindepth <= fitframe["depth"] , maxdepth >= fitframe["depth"]) ]
 
@@ -42,7 +60,7 @@ n_components = components[np.argmin(BIC)]
 
 print "Fitting all frames with ", n_components, " components"
 results = []
-maxheight = 1 # for plotting
+maxheight = 1 # for plotting; is set to max value of 1st frame
 fig = plt.figure()
 
 for f in frames[0:50]:
@@ -69,24 +87,25 @@ for f in frames[0:50]:
 
     results.append([framenum] + meansort + covarsort + weightsort)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(1,2,1)
-    logprob = model.score_samples(x)
-    pdf = np.exp(logprob)
-    if framenum == 1:
-        maxheight = max(pdf)
-    ax.hist(filterdepth["depth"].reshape(-1,1),200, normed=True, histtype='stepfilled', alpha=0.4)
-    ax.plot(x, pdf)
-    for i in range(len(meansort)):
-        plt.plot(x, mlab.normpdf(x, meansort[i], math.sqrt(covarsort[i]))*weightsort[i])
-    plt.ylim([0, maxheight])
-    ax = fig.add_subplot(1,2,2)
-    depthdata.loc[np.invert( np.logical_and(mindepth <= depthdata["depth"], maxdepth >= depthdata["depth"])), "depth"] = None
-    grid = depthdata["depth"].reshape(424, 512) # TODO don't hardcode
+    if args.outframefile != None:
+        fig = plt.figure()
+        ax = fig.add_subplot(1,2,1)
+        logprob = model.score_samples(x)
+        pdf = np.exp(logprob)
+        if framenum == 1:
+            maxheight = max(pdf)
+        ax.hist(filterdepth["depth"].reshape(-1,1),200, normed=True, histtype='stepfilled', alpha=0.4)
+        ax.plot(x, pdf)
+        for i in range(len(meansort)):
+            plt.plot(x, mlab.normpdf(x, meansort[i], math.sqrt(covarsort[i]))*weightsort[i])
+        plt.ylim([0, maxheight])
+        ax = fig.add_subplot(1,2,2)
+        depthdata.loc[np.invert( np.logical_and(mindepth <= depthdata["depth"], maxdepth >= depthdata["depth"])), "depth"] = None
+        grid = depthdata["depth"].reshape(424, 512) # TODO don't hardcode
 
-    plt.imshow(grid, extent=(0, 512, 0, 424)) # TODO ditto
-    plt.savefig("modelfit" + str(framenum).zfill(6) + ".png")
-    plt.close(fig)
+        plt.imshow(grid, extent=(0, 512, 0, 424)) # TODO ditto
+        plt.savefig(args.outframefile + str(framenum).zfill(6) + ".png")
+        plt.close(fig)
 
 
 header = ["frame"] + ["mean" + str(x) for x in range(n_components)] + ["variance" + str(x) for x in range(n_components)] + ["weight" + str(x) for x in range(n_components)]
@@ -94,7 +113,7 @@ header = ["frame"] + ["mean" + str(x) for x in range(n_components)] + ["variance
 
 df = pd.DataFrame(results, columns = header)
 
-df.to_csv("Gaussianmixture.csv")
+df.to_csv(args.outfile)
 
 
 
