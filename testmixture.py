@@ -32,12 +32,14 @@ frames = glob.glob(framestring)
 frames.sort()
 
 print "Using frame ", frames[0], " as reference"
+(width, height) = loadDepth.getDepthDimensions(frames[0])
 
-fitframe = loadDepth.loadDepth(frames[0])
+fitframe = loadDepth.loadDepth(frames[0], width, height)
 
 # Depths determined from Shiny app; covers as wide a range as possible
 # while capturing participant and table
 mindepth = args.mindepth
+
 maxdepth = args.maxdepth
 
 print "Using depths between " + str(mindepth) + " and " + str(maxdepth)
@@ -68,7 +70,7 @@ for f in frames:
     framenum = int(re.search("(\d+)\.txt$", f).group(1))
     print framenum
 
-    depthdata = loadDepth.loadDepth(f)
+    depthdata = loadDepth.loadDepth(f, width, height)
     filterdepth = depthdata[np.logical_and(mindepth <= depthdata["depth"], maxdepth >= depthdata["depth"])]
     model = mixture.GaussianMixture(n_components = n_components)
     model.fit(filterdepth["depth"].reshape(-1,1))
@@ -101,9 +103,9 @@ for f in frames:
         plt.ylim([0, maxheight])
         ax = fig.add_subplot(1,2,2)
         depthdata.loc[np.invert( np.logical_and(mindepth <= depthdata["depth"], maxdepth >= depthdata["depth"])), "depth"] = None
-        grid = depthdata["depth"].reshape(424, 512) # TODO don't hardcode
+        grid = depthdata["depth"].reshape(height, width) 
 
-        plt.imshow(grid, extent=(0, 512, 0, 424)) # TODO ditto
+        plt.imshow(grid, extent=(0, width, 0, height)) 
         plt.savefig(args.outframefile + str(framenum).zfill(6) + ".png")
         plt.close(fig)
 
