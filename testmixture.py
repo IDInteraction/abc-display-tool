@@ -10,6 +10,8 @@ import math
 
 np.random.seed(0)
 
+
+
 frames = glob.glob("/media/sf_spot_the_difference/depth/P01/depthDepth*.txt")
 frames.sort()
 
@@ -41,7 +43,9 @@ n_components = components[np.argmin(BIC)]
 print "Fitting all frames with ", n_components, " components"
 results = []
 maxheight = 1 # for plotting
-for f in frames:
+fig = plt.figure()
+
+for f in frames[0:50]:
     
     framenum = int(re.search("(\d+)\.txt$", f).group(1))
     print framenum
@@ -64,9 +68,9 @@ for f in frames:
 
 
     results.append([framenum] + meansort + covarsort + weightsort)
-    
+
     fig = plt.figure()
-    ax = fig.add_subplot(1,1,1)
+    ax = fig.add_subplot(1,2,1)
     logprob = model.score_samples(x)
     pdf = np.exp(logprob)
     if framenum == 1:
@@ -76,6 +80,11 @@ for f in frames:
     for i in range(len(meansort)):
         plt.plot(x, mlab.normpdf(x, meansort[i], math.sqrt(covarsort[i]))*weightsort[i])
     plt.ylim([0, maxheight])
+    ax = fig.add_subplot(1,2,2)
+    depthdata.loc[np.invert( np.logical_and(mindepth <= depthdata["depth"], maxdepth >= depthdata["depth"])), "depth"] = None
+    grid = depthdata["depth"].reshape(424, 512) # TODO don't hardcode
+
+    plt.imshow(grid, extent=(0, 512, 0, 424)) # TODO ditto
     plt.savefig("modelfit" + str(framenum).zfill(6) + ".png")
     plt.close(fig)
 
