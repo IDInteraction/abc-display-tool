@@ -1,9 +1,12 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
 from sklearn import mixture
 import glob
 import loadDepth
+import re
+import math
 
 np.random.seed(0)
 
@@ -23,6 +26,8 @@ filterdepth = fitframe[np.logical_and(mindepth <= fitframe["depth"] , maxdepth >
 
 components = np.arange(1,8)
 
+x = np.linspace(mindepth, maxdepth).reshape(-1,1)
+
 models = [None for i in range(len(components))]
 
 for c in range(len(components)):
@@ -35,18 +40,44 @@ n_components = components[np.argmin(BIC)]
 
 print "Fitting all frames with ", n_components, " components"
 results = []
-for f in frames[1:10]:
+maxheight = 1 # for plotting
+for f in frames:
+    
+    framenum = int(re.search("(\d+)\.txt$", f).group(1))
+    print framenum
+
     depthdata = loadDepth.loadDepth(f)
     filterdepth = depthdata[np.logical_and(mindepth <= depthdata["depth"], maxdepth >= depthdata["depth"])]
     model = mixture.GaussianMixture(n_components = n_components)
     model.fit(filterdepth["depth"].reshape(-1,1))
+    
 
     means = [item for sublist in model.means_.tolist() for item  in sublist]  
     covars = [item[0] for sublist in model.covariances_.tolist() for item  in sublist]  
     weights = model.weights_.tolist()
 
-    results.append([f] + means + covars + weights)
+    componentOrder =  np.argsort(means)
+
+    meansort = [means[i] for i in componentOrder]
+    covarsort = [covars[i] for i in componentOrder]
+    weightsort = [weights[i] for i in componentOrder]
+
+
+    results.append([framenum] + meansort + covarsort + weightsort)
     
+    fig = plt.figure()
+    ax = fig.add_subplot(1,1,1)
+    logprob = model.score_samples(x)
+    pdf = np.exp(logprob)
+    if framenum == 1:
+        maxheight = max(pdf)
+    ax.hist(filterdepth["depth"].reshape(-1,1),200, normed=True, histtype='stepfilled', alpha=0.4)
+    ax.plot(x, pdf)
+    for i in range(len(meansort)):
+        plt.plot(x, mlab.normpdf(x, meansort[i], math.sqrt(covarsort[i]))*weightsort[i])
+    plt.ylim([0, maxheight])
+    plt.savefig("modelfit" + str(framenum).zfill(6) + ".png")
+    plt.close(fig)
 
 
 header = ["frame"] + ["mean" + str(x) for x in range(n_components)] + ["variance" + str(x) for x in range(n_components)] + ["weight" + str(x) for x in range(n_components)]
@@ -54,7 +85,7 @@ header = ["frame"] + ["mean" + str(x) for x in range(n_components)] + ["variance
 
 df = pd.DataFrame(results, columns = header)
 
-print df
+df.to_csv("Gaussianmixture.csv")
 
 
 
