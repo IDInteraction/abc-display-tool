@@ -63,7 +63,7 @@ results = []
 maxheight = 1 # for plotting; is set to max value of 1st frame
 fig = plt.figure()
 
-for f in frames[0:50]:
+for f in frames:
     
     framenum = int(re.search("(\d+)\.txt$", f).group(1))
     print framenum
