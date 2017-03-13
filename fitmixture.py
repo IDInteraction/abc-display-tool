@@ -21,6 +21,8 @@ parser.add_argument("--maxdepth", dest = "maxdepth", type = int, required = Fals
 parser.add_argument("--frameprefix", dest = "frameprefix", type = str, required = True)
 parser.add_argument("--framesuffix", dest = "framesuffix", type = str, required = False, default = ".txt.gz")
 parser.add_argument("--outframefile", dest = "outframefile", type= str, required = False)
+parser.add_argument("--numcomponents", dest = "numcomponents", type=int, required = False, default = 0)
+
 
 
 args = parser.parse_args()
@@ -46,19 +48,25 @@ print "Using depths between " + str(mindepth) + " and " + str(maxdepth)
 
 filterdepth = fitframe[np.logical_and(mindepth <= fitframe["depth"] , maxdepth >= fitframe["depth"]) ]
 
-components = np.arange(1,8)
 
 x = np.linspace(mindepth, maxdepth).reshape(-1,1)
 
-models = [None for i in range(len(components))]
+if args.numcomponents == 0:
+    print "Setting num components automatically via BIC"
+    components = np.arange(1,8)
+    models = [None for i in range(len(components))]
 
-for c in range(len(components)):
-    models[c] = mixture.GaussianMixture(n_components = components[c])
-    models[c].fit(filterdepth["depth"].reshape(-1,1))
-    
-BIC = [m.bic(filterdepth["depth"].reshape(-1,1)) for m in models]
+    for c in range(len(components)):
+        models[c] = mixture.GaussianMixture(n_components = components[c])
+        models[c].fit(filterdepth["depth"].reshape(-1,1))
+        
+    BIC = [m.bic(filterdepth["depth"].reshape(-1,1)) for m in models]
 
-n_components = components[np.argmin(BIC)]
+    n_components = components[np.argmin(BIC)]
+else:
+    print "Setting num components from command line"
+    n_components = args.numcomponents
+
 
 print "Fitting all frames with ", n_components, " components"
 results = []
