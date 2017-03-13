@@ -143,7 +143,35 @@ parser.add_argument("--skipfile",
 
 
 parser.add_argument("--fps", dest="fps", type = int, required = False, default = 30)
+
+
+parser.add_argument(
+        "--framemap",
+        dest = "framemap",
+        type = str,
+        required = False,
+        help = "A list of frames and times that each video frame occured at.  Only needed if this is *different* from framelist used to encode the behaviours")
+
+
+parser.add_argument(
+        "--offsettimes",
+        dest = "offsettimes",
+        type = str,
+        required = False,
+        help = "A file containing the participant codes and frame offsets.  Only needed when the video we're generating an attention file for didn't start at the same time as the ones used to encode the behaviours")
+
+
+args = parser.parse_args()
+
+
 fps = args.fps
+
+if not(args.framemap is None) or not(args.offsettimes is None):
+    print "Not yet implemented"
+    quit()
+
+    
+
 
 if args.skipfile and not args.event:
     print "An event must be specified when outputting a skipfile"
