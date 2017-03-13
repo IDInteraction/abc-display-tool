@@ -110,7 +110,15 @@ def loadExternalEvents(infile, participant):
 
     return extEvents
 
+def getMaxTime(attentionFile, participant):
+    """ Get the maximum timestamp in a file """
     
+    attention = loadAttentionFile(attentionFile, participant)
+    maxtime = max(attention["attTransEndss"])
+    return maxtime
+
+
+
 
 
 ########################################
@@ -187,7 +195,9 @@ if args.event is None:
 
 
     # Get the maximum and minimum frames to encode
-    maxtime = max(attention['attTransEndss'])
+#    maxtime = max(attention['attTransEndss']) 
+    maxtime = getMaxTime(args.attentionfile, args.participant)
+
     mintime = min(attention['attTransStartss'])
 	
 	
