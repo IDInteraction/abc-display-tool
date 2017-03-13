@@ -73,9 +73,14 @@ results = []
 maxheight = 1 # for plotting; is set to max value of 1st frame
 fig = plt.figure()
 
+frameRegex = args.frameprefix + "(\d+)\\" + args.framesuffix
+print "Matching frames using:"
+print frameRegex
+
 for f in frames:
     
-    framenum = int(re.search("(\d+)\.txt$", f).group(1))
+    framenum = int(re.search(frameRegex, f).group(1))
+    
     print framenum
 
     depthdata = loadDepth.loadDepth(f, width, height)
