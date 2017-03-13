@@ -1,11 +1,12 @@
 #!/usr/bin/python
 
-# Convert a spot the difference attention time file to 
-# the attention at each frame
+"""Convert a spot the difference attention time file to 
+ the attention at each frame
 
-# OR Extract the frame number of an event from the attention file
+ OR Extract the frame number of an event from the attention file
 
-# TODO Allow user to choose how to handle transition periods
+ TODO Allow user to choose how to handle transition periods
+"""
 
 import os
 import sys
@@ -14,7 +15,6 @@ import pandas as pd
 import argparse
 import math
 
-fps = 30
 
 binarycoding = [("tablet", 1)]
 
@@ -140,8 +140,10 @@ parser.add_argument("--externaleventfile",
 parser.add_argument("--skipfile",
         dest = "skipfile", type = str, required = False,
         help = "If specified, program will *only* output a skipfile in a format suitable for the CppMT object tracking pipeline")
-args = parser.parse_args()
 
+
+parser.add_argument("--fps", dest="fps", type = int, required = False, default = 30)
+fps = args.fps
 
 if args.skipfile and not args.event:
     print "An event must be specified when outputting a skipfile"
