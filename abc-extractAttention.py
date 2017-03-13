@@ -262,8 +262,7 @@ else:
     print "Event occured at:", eventtime
     if maxencodedattention <= eventtime:
         print "WARNING: Event is after ground truth file"
-        print "Setting to last ground truth attention"
-        eventtime = maxencodedattention
+        print "Assuming last attention persisted to specified time"
 
     eventframe = int(eventtime * fps)
 
