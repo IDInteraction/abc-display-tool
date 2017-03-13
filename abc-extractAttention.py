@@ -117,6 +117,31 @@ def getMaxTime(attentionFile, participant):
     maxtime = max(attention["attTransEndss"])
     return maxtime
 
+def getOffset(offsetfile, participant):
+    offsets = pd.read_csv(offsetfile)
+
+    offsetrow = offsets[offsets["participantCode"] == participant]
+
+    if len(offsetrow) != 1:
+        Exception("Could not get offset for participant")
+
+
+    return int(offsetrow["delta"])
+
+
+
+def loadFramemap(mapfile, frameOffset):
+
+
+    framemap = pd.read_csv(mapfile,
+        header = None, names = ["kinectframe", "frametime"])
+
+    framemap["reltime"] = framemap["frametime"] - framemap["frametime"][0]
+    framemap["webcamframe"] = framemap["reltime"].apply(lambda x: 
+            round(x * args.fps) + offset)
+    framemap["webcamtime"] = (framemap["webcamframe"] - 1) / args.fps
+
+    return framemap
 
 
 
@@ -162,8 +187,8 @@ parser.add_argument(
 
 
 parser.add_argument(
-        "--offsettimes",
-        dest = "offsettimes",
+        "--offsetfile",
+        dest = "offsetfile",
         type = str,
         required = False,
         help = "A file containing the participant codes and frame offsets.  Only needed when the video we're generating an attention file for didn't start at the same time as the ones used to encode the behaviours")
@@ -174,13 +199,6 @@ args = parser.parse_args()
 
 fps = args.fps
 
-if not(args.framemap is None) or not(args.offsettimes is None):
-    print "Not yet implemented"
-    quit()
-
-    
-
-
 if args.skipfile and not args.event:
     print "An event must be specified when outputting a skipfile"
     quit()
@@ -190,24 +208,27 @@ if args.skipfile is None and args.outputfile is None:
     quit()
 
 
+# Load data to do Kinect frame mapping
+if bool(args.framemap is None) != bool(args.offsetfile is None):
+    raise Exception("Must specify an offset time file AND a framemap")
+
+if not(args.framemap is None):
+    offset = getOffset(args.offsetfile, args.participant)
+    framemap = loadFramemap(args.framemap, offset)
+
+
 if args.event is None:
     attention = loadAttention(args.attentionfile, args.participant)
 
-
     # Get the maximum and minimum frames to encode
-#    maxtime = max(attention['attTransEndss']) 
     maxtime = getMaxTime(args.attentionfile, args.participant)
 
     mintime = min(attention['attTransStartss'])
-	
 	
     frames = range(int(mintime * fps), int(maxtime * fps))
     times = [x / float(fps) for x in frames] 
 	
     attention = [getAttention(x, attention["attTransMidss"], attention["annotation"]) for x in times]
-	
-	
-	
 	
     outdata = pd.DataFrame({"frame": frames,
 	    "bbx": 150,
@@ -225,7 +246,8 @@ if args.event is None:
     goodvals = [x[1] for x in binarycoding]
     outdata["pred"] = np.where([w in goodvals for w in outdata["pred"]],
        outdata["pred"], 0)
-	
+
+
 else:
     if args.externaleventfile is None:
         print "Must specify the external event file"
@@ -269,7 +291,7 @@ else:
 
     maxencodedattention  =  max(attention['attTransMidss'])
     print "Max encoded attention:", maxencodedattention
-    print "Event occured at:", eventtime
+    print "Event occured at (webcam time):", eventtime
     if maxencodedattention <= eventtime:
         print "WARNING: Event is after ground truth file"
         print "Assuming last attention persisted to specified time"
@@ -286,8 +308,19 @@ else:
             index = [eventframe])
 
 # Frames are 1 indexed in abc-classify:
-
 outdata["frame"] = outdata["frame"] + 1
+
+
+# This is all in webcam-frames.  If we have defined a kinect mapping
+# we need to output in this
+if framemap is not None:
+    outdata = outdata.merge(framemap[["webcamframe", "kinectframe"]],
+             left_on="frame",right_on="webcamframe", sort = True) 
+    del outdata['webcamframe']
+    outdata["frame"] = outdata["kinectframe"]
+    del outdata["kinectframe"]
+    outdata.dropna(inplace = True)
+
 
 if args.skipfile is not None:
     print "Outputting skipfile"
