@@ -87,10 +87,9 @@ def filterFrame(inframe, mindepth = None, maxdepth = None, polygon = None):
     if maxdepth is not None:
         filterframe = filterframe[maxdepth >= filterframe["depth"]]
     if polygon is not None:
-        print "Masking polygon"
+        # TODO This is horribly slow.  
         filterframe["inbox"] = filterframe.apply(lambda i: polygon.contains(Point( (i.x, i.y))), axis = 1)
         filterframe = filterframe[filterframe["inbox"] == True]
-        print "Polygon masked"
 
     return filterframe
 
@@ -130,19 +129,33 @@ parser.add_argument("--numcomponents"
         , dest = "numcomponents", type=int, required = False, default = 0)
 parser.add_argument("--bbox"
         , dest = "bbox", type=str, required = False)
+parser.add_argument("--startframe",
+        dest = "startframe", type = int, required = True)
+parser.add_argument("--endframe",
+        dest = "endframe", type = int, required = True)
 
 args = parser.parse_args()
 
+framerange = range(args.startframe, args.endframe + 1)
+#  series with index being frame number and value being filename
+
 framestring = args.infolder + args.frameprefix + "*" + args.framesuffix
 print "using glob:" + framestring
-
 frames = glob.glob(framestring)
 frames.sort()
 
-print "Using frame ", frames[0], " as reference"
-(width, height) = loadDepth.getDepthDimensions(frames[0])
+frameRegex = args.frameprefix + "(\d+)\\" + args.framesuffix
+framenumbers = map(lambda x: int(re.search(frameRegex, x).group(1)),frames)
+frameList = pd.Series(frames, index = framenumbers)
 
-fitframe = loadDepth.loadDepth(frames[0], width, height)
+# Filter series to range we're interested in
+frameList = frameList.loc[np.logical_and(frameList.index >= args.startframe,
+        frameList.index <= args.endframe)]
+
+del frames # so we don't use by accident
+
+(width, height) = loadDepth.getDepthDimensions(frameList.iloc[0])
+
 
 # Default depths (defined in args above) determined from Shiny app;
 #covers as wide a range as possible  while capturing participant and table
@@ -152,20 +165,19 @@ maxdepth = args.maxdepth
 
 print "Using depths between " + str(mindepth) + " and " + str(maxdepth)
 
-#print fitframe
-#print genPolygon(bboxdata.iloc[0])
-#quit()
-
 x = np.linspace(mindepth, maxdepth).reshape(-1,1)
 
 polygon = None
 if args.bbox is not None:
+    # Read in the bounding boxes for all frames we have tracking data for
     bboxdata = readBoundingBox(args.bbox)
-    # get polygon for first frame
-    print "WARNING - JUST USING FIRST BBOX - FRAMES NOT IN SYNC"
-    print "JUST FOR DEVELOPMENT"
-    polygon = genPolygon(bboxdata.iloc[0])
+    # check we have tracking data for all these frames 
+    if not set(frameList.index).issubset(bboxdata.index):
+        sys.exit("Don't have tracking frames for all frames of interest")
+    polygon = genPolygon(bboxdata.iloc[frameList.index[0]])
+    print "Using frame " + str(frameList.index[0]) + " as reference"
 
+fitframe = loadDepth.loadDepth(frameList.iloc[0], width, height)
 
 filterdepth = filterFrame(fitframe, 
         mindepth = mindepth,
@@ -196,22 +208,17 @@ results = []
 maxheight = 1 # for plotting; is set to max value of 1st frame
 fig = plt.figure()
 
-frameRegex = args.frameprefix + "(\d+)\\" + args.framesuffix
-print "Matching frames using:"
-print frameRegex
 
-for f in frames:
+for i in range(len(frameList)):
+    f = frameList.iloc[i]
     
-    framenum = int(re.search(frameRegex, f).group(1))
+    framenum = frameList.index[i] 
     
-    print framenum
+    print f, framenum
     polygon = None
     if bboxdata is not None:
-        polygon = genPolygon(bboxdata.iloc[int(framenum)])
-    print "DEBUG ONLY"
-    print polygon
-    print polygon.area
-    print list(polygon.exterior.coords)
+        polygon = genPolygon(bboxdata.loc[framenum])
+    
     depthdata = loadDepth.loadDepth(f, width, height)
     filterdepth = filterFrame(depthdata,
             mindepth = mindepth,
@@ -239,7 +246,7 @@ for f in frames:
         ax = fig.add_subplot(1,2,1)
         logprob = model.score_samples(x)
         pdf = np.exp(logprob)
-        if framenum == 1:
+        if i == 0: 
             maxheight = max(pdf)
         ax.hist(filterdepth["depth"].reshape(-1,1),200, normed=True, histtype='stepfilled', alpha=0.4)
         ax.plot(x, pdf)
