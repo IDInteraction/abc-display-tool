@@ -40,7 +40,17 @@ def loadTrackingData(infile,
             del indata['Timestamp (ms)']
         else:
             print("Could not recognise input format")
-            sys.exit()
+            print("Assuming frame is column 0")
+            
+            indata = pd.read_csv(infile, index_col = 0)
+
+            if indata.index.name is None:
+                print "Using unnamed column as frame"
+            else:
+                print "Using " + indata.index.name + " as frame"
+            print "Using the following columns for classifier:"
+            print indata.columns.values
+            
 
     return indata
 
