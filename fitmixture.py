@@ -127,6 +127,7 @@ header = ["frame"] + ["mean" + str(x) for x in range(n_components)] + ["variance
 
 
 df = pd.DataFrame(results, columns = header)
+df = df.set_index("frame", verify_integrity = True)
 
 df.to_csv(args.outfile)
 
