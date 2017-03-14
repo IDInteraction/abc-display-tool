@@ -7,6 +7,7 @@ import pandas as pd
 import argparse
 import cv2
 import re
+from sklearn import tree
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import ShuffleSplit
@@ -113,16 +114,16 @@ def getMultiVideoFrame(videosrc, frameNumber):
 
 def runClassifier(traininggroundtruth, trainingtrackingdata):
 
-    tree = DecisionTreeClassifier()
+    decisionTree = DecisionTreeClassifier()
 
     trainedframescount  = len(traininggroundtruth)
     if len(trainingtrackingdata.index) != trainedframescount:
         print "Size mismatch"
         sys.exit()
     print "Classifying with " + str(trainedframescount) + " frames"
-    tree.fit(trainingtrackingdata, traininggroundtruth)
+    decisionTree.fit(trainingtrackingdata, traininggroundtruth)
 
-    return tree
+    return decisionTree
 
 def getPredictions(inputtree, alltrackingdata, evaluationframes, groundtruthframes = None, groundtruth = None):
 
@@ -321,6 +322,9 @@ parser.add_argument("--includegt",
         help = "Whether to include ground truth frames when outputting predictions")
 parser.set_defaults(includegt=False)
 
+parser.add_argument("--exporttree",
+        dest = "exporttree", type = str, required = False)
+
 
 args = parser.parse_args()
 
@@ -435,10 +439,10 @@ if args.entergt:
 
         key =  cv2.waitKey(0)
         if(chr(key) == 'c'):
-            tree = runClassifier(groundtruth[:(trainedframescount)],
+            decisionTree = runClassifier(groundtruth[:(trainedframescount)],
                     trackingData.loc[trainingframes[:(trainedframescount)]])
 
-            (meanAc, stdAc)  = getAccuracyCrossVal(tree,
+            (meanAc, stdAc)  = getAccuracyCrossVal(decisionTree,
                     groundtruth[:trainedframescount],
                     trackingData.loc[trainingframes[:trainedframescount]])
             print("Crossval Accuracy: Mean: %0.3f, Std: %0.3f" % (meanAc, stdAc))
@@ -446,7 +450,7 @@ if args.entergt:
             if args.extgt is not None:
                 print "Classification using all remaining external ground truth data:"
 
-                predicted = tree.predict(trackingData.loc[trainingframes[trainedframescount:]])
+                predicted = decisionTree.predict(trackingData.loc[trainingframes[trainedframescount:]])
                 evaluationgroundtruth = externalGT.loc[trainingframes[trainedframescount:]]
 
                 print(metrics.classification_report(evaluationgroundtruth, predicted))
@@ -455,13 +459,13 @@ if args.entergt:
 
 
             if args.outfile is not None:
-                savePredictions(tree,  trackingData,
+                savePredictions(decisionTree,  trackingData,
                         trainingframes[trainedframescount:], args.outfile)
         elif(chr(key) == 'e'):
 
             print "Probability accuracy at least:"
 
-            probs = getShuffledSuccessProbs(tree,
+            probs = getShuffledSuccessProbs(decisionTree,
                     groundtruth[:trainedframescount],
                     trackingData.loc[trainingframes[:trainedframescount]])
             print probs.mean()
@@ -480,10 +484,10 @@ if args.entergt:
             cv2.destroyWindow("Classification")
             print "Playing predictions, including frames manually classified"
 
-            tree = runClassifier(groundtruth[:(trainedframescount)],
+            decisionTree = runClassifier(groundtruth[:(trainedframescount)],
                     trackingData.loc[trainingframes[:(trainedframescount)]])
 
-            predictions = getPredictions(tree, trackingData,
+            predictions = getPredictions(decisionTree, trackingData,
                     trainingframes[trainedframescount:],
                     groundtruthframes = trainingframes[:trainedframescount],
                     groundtruth =  groundtruth)
@@ -509,16 +513,16 @@ else:
     groundtruthDF = externalGT.loc[trainingframes[:trainedframescount],"state"]
     groundtruth = list(groundtruthDF)
 
-    tree = runClassifier(groundtruth[:(trainedframescount)],
+    decisionTree = runClassifier(groundtruth[:(trainedframescount)],
                   trackingData.loc[trainingframes[:(trainedframescount)]])
 
-    (meanAc, stdAc)  = getAccuracyCrossVal(tree,
+    (meanAc, stdAc)  = getAccuracyCrossVal(decisionTree,
                     groundtruth[:trainedframescount],
                     trackingData.loc[trainingframes[:trainedframescount]])[:2]
     print("Crossval Accuracy: Mean: %0.3f, Std: %0.3f" % (meanAc, stdAc))
     if args.noaccuracyprobs == True:
         print "Probability accuracy at least:"
-        probs = getShuffledSuccessProbs(tree,
+        probs = getShuffledSuccessProbs(decisionTree,
         groundtruth[:trainedframescount],
         trackingData.loc[trainingframes[:trainedframescount]])
         print probs.mean()
@@ -530,12 +534,12 @@ else:
 
     if args.outfile is not None:
         if args.includegt:
-            savePredictions(tree,  trackingData, trainingframes[trainedframescount:],
+            savePredictions(decisionTree,  trackingData, trainingframes[trainedframescount:],
                     args.outfile,
                     groundtruthframes = trainingframes[:trainedframescount],
                     groundtruth = groundtruth[:trainedframescount])
         else:
-            savePredictions(tree,  trackingData, trainingframes[trainedframescount:],
+            savePredictions(decisionTree,  trackingData, trainingframes[trainedframescount:],
                     args.outfile)
 
 
@@ -543,7 +547,7 @@ else:
     if args.summaryfile is not None:
         print "Outputting summary"
 
-        (xvmean, xvsd, xvlb, xvub) = getAccuracyCrossVal(tree,
+        (xvmean, xvsd, xvlb, xvub) = getAccuracyCrossVal(decisionTree,
                         groundtruth[:trainedframescount],
                         trackingData.loc[trainingframes[:trainedframescount]])
 
@@ -556,11 +560,16 @@ else:
                     str(xvsd) + "," + 
                     str(xvlb) + "," + 
                     str(xvub) + "," +
-                    str(getAccuracy(tree,
+                    str(getAccuracy(decisionTree,
                         externalGT.loc[trainingframes[trainedframescount:],
                             "state"],
                         trackingData.loc[trainingframes[trainedframescount:]]))
                      + "\n")
+
+if args.exporttree is not None:
+    print "Saving tree"
+    tree.export_graphviz(decisionTree, out_file = args.exporttree) 
+
 
 if args.rngstate is not None:
     print "Saving final RNG state"
