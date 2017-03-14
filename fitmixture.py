@@ -1,29 +1,121 @@
+import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
 from sklearn import mixture
 import glob
 import loadDepth
 import re
 import math
 import argparse
+from itertools import chain
 
+def genPolygon(inrow):
+    numcoord = len(inrow)
+
+    if numcoord % 2 != 0:
+        Exception("Even number of values needed to make polygon")
+    poly = []
+    for i in range(0,numcoord,2):
+        p1 = inrow[i]
+        if(i == numcoord - 1):
+            p2 = inrow[0]
+        else:
+            p2 = inrow[i+1]
+
+        poly.append((p1, p2))
+
+    return Polygon(poly)
+
+
+def readBoundingBox(infile):
+    """ Read bounding box information in from a file """
+    bboxdata = pd.read_csv(infile, header = 0)
+
+    if "Frame" in bboxdata.columns.values:
+        print "Using 'Frame' as index col"
+        bboxdata.set_index("Frame", verify_integrity = True, inplace = True)
+    elif "frame" in bboxdata.columns.values:
+        print "using 'frame' as index col"
+        bbox.set_index("frame", verify_integrity = True, inplace = True)
+    else:
+        print "Could not determine frame.  Aborting"
+        quit()
+
+    if "Active points" in bboxdata.columns.values:
+        print "Detected data as cppMT"
+        vertexColumns = [ 'Bounding box vertex 1 X (px)',
+                 'Bounding box vertex 1 Y (px)',
+                 'Bounding box vertex 2 X (px)',
+                 'Bounding box vertex 2 Y (px)',
+                 'Bounding box vertex 3 X (px)',
+                 'Bounding box vertex 3 Y (px)',
+                 'Bounding box vertex 4 X (px)',
+                 'Bounding box vertex 4 Y (px)']
+    else:
+        print "Could not determine bbox format"
+        quit()
+
+
+    bboxdata = bboxdata[vertexColumns]
+
+    # Standardise names
+    vertices = range(1,5)
+    standardNames = zip(map(lambda x: "v" + str(x) + "x", vertices ), 
+        map(lambda y: "v" + str(y) + "y", vertices ))
+    standardNames = list(chain(*standardNames))
+
+    bboxdata.columns = standardNames
+    bboxdata.index.rename("frame", inplace= True)
+
+    return bboxdata
+
+def filterFrame(inframe, mindepth = None, maxdepth = None, polygon = None):
+    """Filter a frame by depth and / or masking polygon"""
+
+    filterframe = inframe
+
+    #TODO could do these in one go if min and max defined
+    if mindepth is not None:
+        filterframe = filterframe[mindepth <= filterframe["depth"]]
+
+    if maxdepth is not None:
+        filterframe = filterframe[maxdepth >= filterframe["depth"]]
+    print len(filterframe)
+    if polygon is not None:
+        print "Masking polygon"
+        filterframe["inbox"] = filterframe.apply(lambda i: polygon.contains(Point( (i.x, i.y))), axis = 1)
+        filterframe = filterframe[filterframe["inbox"] == True]
+
+    return filterframe
+
+#########################################
 
 np.random.seed(0)
 
 parser = argparse.ArgumentParser(description = "Load depth data, and fit mixture model")
 
-parser.add_argument("--infolder", dest = "infolder", type = str, required = True)
-parser.add_argument("--outfile", dest = "outfile", type = str, required = True)
-parser.add_argument("--mindepth", dest = "mindepth", type = int, required = False, default = 810)
-parser.add_argument("--maxdepth", dest = "maxdepth", type = int, required = False, default =  1710)
-parser.add_argument("--frameprefix", dest = "frameprefix", type = str, required = True)
-parser.add_argument("--framesuffix", dest = "framesuffix", type = str, required = False, default = ".txt.gz")
-parser.add_argument("--outframefile", dest = "outframefile", type= str, required = False)
-parser.add_argument("--numcomponents", dest = "numcomponents", type=int, required = False, default = 0)
-
-
+parser.add_argument("--infolder",
+        dest = "infolder", type = str, required = True)
+parser.add_argument("--outfile",
+        dest = "outfile", type = str, required = True)
+parser.add_argument("--mindepth",
+        dest = "mindepth", type = int, required = False, default = 810)
+parser.add_argument("--maxdepth",
+        dest = "maxdepth", type = int, required = False, default =  1710)
+parser.add_argument("--frameprefix",
+        dest = "frameprefix", type = str, required = True)
+parser.add_argument("--framesuffix",
+        dest = "framesuffix", type = str, required = False, default = ".txt.gz")
+parser.add_argument("--outframefile",
+        dest = "outframefile", type= str, required = False)
+parser.add_argument("--numcomponents"
+        , dest = "numcomponents", type=int, required = False, default = 0)
+parser.add_argument("--bbox"
+        , dest = "bbox", type=str, required = False)
 
 args = parser.parse_args()
 
@@ -38,18 +130,35 @@ print "Using frame ", frames[0], " as reference"
 
 fitframe = loadDepth.loadDepth(frames[0], width, height)
 
-# Depths determined from Shiny app; covers as wide a range as possible
-# while capturing participant and table
+# Default depths (defined in args above) determined from Shiny app;
+#covers as wide a range as possible  while capturing participant and table
 mindepth = args.mindepth
 
 maxdepth = args.maxdepth
 
 print "Using depths between " + str(mindepth) + " and " + str(maxdepth)
 
-filterdepth = fitframe[np.logical_and(mindepth <= fitframe["depth"] , maxdepth >= fitframe["depth"]) ]
-
+#print fitframe
+#print genPolygon(bboxdata.iloc[0])
+#quit()
 
 x = np.linspace(mindepth, maxdepth).reshape(-1,1)
+
+polygon = None
+if args.bbox is not None:
+    bboxdata = readBoundingBox(args.bbox)
+    # get polygon for first frame
+    print "WARNING - JUST USING FIRST BBOX - FRAMES NOT IN SYNC"
+    print "JUST FOR DEVELOPMENT"
+    polygon = genPolygon(bboxdata.iloc[0])
+
+
+filterdepth = filterFrame(fitframe, 
+        mindepth = mindepth,
+        maxdepth = maxdepth,
+        polygon = polygon)
+
+
 
 if args.numcomponents == 0:
     print "Setting num components automatically via BIC"
@@ -82,9 +191,19 @@ for f in frames:
     framenum = int(re.search(frameRegex, f).group(1))
     
     print framenum
-
+    polygon = None
+    if bboxdata is not None:
+        polygon = genPolygon(bboxdata.iloc[int(framenum)])
+    print "DEBUG ONLY"
+    print polygon
+    print polygon.area
+    print polygon.exterior.coords
+    quit()
     depthdata = loadDepth.loadDepth(f, width, height)
-    filterdepth = depthdata[np.logical_and(mindepth <= depthdata["depth"], maxdepth >= depthdata["depth"])]
+    filterdepth = filterFrame(depthdata,
+            mindepth = mindepth,
+            maxdepth = maxdepth,
+            polygon = polygon)
     model = mixture.GaussianMixture(n_components = n_components)
     model.fit(filterdepth["depth"].reshape(-1,1))
     
