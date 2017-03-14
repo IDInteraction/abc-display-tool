@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 from shapely.geometry import Point
+from shapely.geometry import LineString
 from shapely.geometry.polygon import Polygon
 from sklearn import mixture
 import glob
@@ -13,6 +14,7 @@ import math
 import argparse
 from itertools import chain
 
+GRAY =   '#999999'
 def genPolygon(inrow):
     numcoord = len(inrow)
 
@@ -84,13 +86,25 @@ def filterFrame(inframe, mindepth = None, maxdepth = None, polygon = None):
 
     if maxdepth is not None:
         filterframe = filterframe[maxdepth >= filterframe["depth"]]
-    print len(filterframe)
     if polygon is not None:
         print "Masking polygon"
         filterframe["inbox"] = filterframe.apply(lambda i: polygon.contains(Point( (i.x, i.y))), axis = 1)
         filterframe = filterframe[filterframe["inbox"] == True]
+        print "Polygon masked"
 
     return filterframe
+
+def depthImage(filteredframe, width, height):
+    """ Take a filtered frame (i.e. not every (x,y) is defined) and
+    return a frame with all (x,y) defined, and "None" where missing data """
+
+    fullframe = pd.DataFrame()
+    fullframe["x"] = range(width) * height
+    fullframe["y"] = [item for item in range(height) for i in range(width)]
+    fullframe = fullframe.merge(filteredframe, how="left", on=["x","y"])
+
+    return(fullframe)
+
 
 #########################################
 
@@ -197,8 +211,7 @@ for f in frames:
     print "DEBUG ONLY"
     print polygon
     print polygon.area
-    print polygon.exterior.coords
-    quit()
+    print list(polygon.exterior.coords)
     depthdata = loadDepth.loadDepth(f, width, height)
     filterdepth = filterFrame(depthdata,
             mindepth = mindepth,
@@ -234,7 +247,9 @@ for f in frames:
             plt.plot(x, mlab.normpdf(x, meansort[i], math.sqrt(covarsort[i]))*weightsort[i])
         plt.ylim([0, maxheight])
         ax = fig.add_subplot(1,2,2)
-        depthdata.loc[np.invert( np.logical_and(mindepth <= depthdata["depth"], maxdepth >= depthdata["depth"])), "depth"] = None
+
+        depthdata = depthImage(filterdepth, width, height)
+
         grid = depthdata["depth"].reshape(height, width) 
 
         plt.imshow(grid, extent=(0, width, 0, height)) 
