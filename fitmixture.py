@@ -87,7 +87,21 @@ def filterFrame(inframe, mindepth = None, maxdepth = None, polygon = None):
     if maxdepth is not None:
         filterframe = filterframe[maxdepth >= filterframe["depth"]]
     if polygon is not None:
-        # TODO This is horribly slow.  
+        # It is horribly slow to test whether each pixel is in the bounding 
+        # box.  We speed this up by first getting rid of all the pixels 
+        # that cannot be in the box (if unrotated box this is all we'd need do)
+        (x, y) = polygon.exterior.coords.xy
+        minx = min(x)
+        maxx = max(x)
+        miny = min(y)
+        maxy = max(y)
+
+        filterframe = filterframe[(filterframe["x"] <= maxx) & 
+                (filterframe["x"] >= minx) &
+                (filterframe["y"] <= maxy) & 
+                (filterframe["y"] >= miny)]
+
+
         filterframe["inbox"] = filterframe.apply(lambda i: polygon.contains(Point( (i.x, i.y))), axis = 1)
         filterframe = filterframe[filterframe["inbox"] == True]
 
@@ -206,6 +220,7 @@ else:
 print "Fitting all frames with ", n_components, " components"
 results = []
 maxheight = 1 # for plotting; is set to max value of 1st frame
+heightset = False
 fig = plt.figure()
 
 
@@ -246,8 +261,9 @@ for i in range(len(frameList)):
         ax = fig.add_subplot(1,2,1)
         logprob = model.score_samples(x)
         pdf = np.exp(logprob)
-        if i == 0: 
+        if not heightset:
             maxheight = max(pdf)
+            heightset = True
         ax.hist(filterdepth["depth"].reshape(-1,1),200, normed=True, histtype='stepfilled', alpha=0.4)
         ax.plot(x, pdf)
         for i in range(len(meansort)):
