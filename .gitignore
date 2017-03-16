@@ -4,5 +4,6 @@
 *.bin
 *.avi
 tags
-
+*.png
+*.mp4
 
