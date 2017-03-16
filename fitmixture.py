@@ -85,6 +85,23 @@ def filterFrame(inframe, mindepth = None, maxdepth = None, polygon = None):
     if maxdepth is not None:
         filterframe = filterframe[maxdepth >= filterframe["depth"]]
     if polygon is not None:
+        # We filter the points in the bounding box in two stages;
+        # first a crude box based on the maximum extent of the polygon
+        # then using matplotlib to test the remaining points properly
+        # TODO Don't do part 2 if rotation is 0
+        xs = [p[0] for p in polygon]
+        ys = [p[1] for p in polygon]
+
+        minx=min(xs)
+        maxx=max(xs)
+        miny=min(ys)
+        maxy=max(ys)
+
+        filterframe = filterframe[(filterframe["x"] <= maxx) & 
+                (filterframe["x"] >= minx) &
+                (filterframe["y"] <= maxy) & 
+                (filterframe["y"] >= miny)]
+
         path = mpltPath.Path(polygon)
         pointarr =[filterframe["x"].values, filterframe["y"].values]
         tpointarr = map(list, zip(*pointarr))
