@@ -170,7 +170,8 @@ frameList = frameList.loc[np.logical_and(frameList.index >= args.startframe,
         frameList.index <= args.endframe)]
 
 del frames # so we don't use by accident
-
+if len(frameList) == 0:
+    sys.exit("Couldn't find any matching frames")
 (width, height) = loadDepth.getDepthDimensions(frameList.iloc[0])
 
 
