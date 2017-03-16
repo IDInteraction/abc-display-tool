@@ -234,7 +234,11 @@ for i in range(len(frameList)):
     
     print f, framenum
     polygon = None
-    if bboxdata is not None:
+    try:
+        bboxdata
+    except NameError:
+        pass
+    else:
         polygon = genPolygon(bboxdata.loc[framenum])
 
     
