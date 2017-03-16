@@ -3,9 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
-from shapely.geometry import Point
-from shapely.geometry import LineString
-from shapely.geometry.polygon import Polygon
+import matplotlib.path as mpltPath
 from sklearn import mixture
 import glob
 import loadDepth
@@ -30,7 +28,7 @@ def genPolygon(inrow):
 
         poly.append((p1, p2))
 
-    return Polygon(poly)
+    return poly
 
 
 def readBoundingBox(infile):
@@ -87,23 +85,11 @@ def filterFrame(inframe, mindepth = None, maxdepth = None, polygon = None):
     if maxdepth is not None:
         filterframe = filterframe[maxdepth >= filterframe["depth"]]
     if polygon is not None:
-        # It is horribly slow to test whether each pixel is in the bounding 
-        # box.  We speed this up by first getting rid of all the pixels 
-        # that cannot be in the box (if unrotated box this is all we'd need do)
-        (x, y) = polygon.exterior.coords.xy
-        minx = min(x)
-        maxx = max(x)
-        miny = min(y)
-        maxy = max(y)
-
-        filterframe = filterframe[(filterframe["x"] <= maxx) & 
-                (filterframe["x"] >= minx) &
-                (filterframe["y"] <= maxy) & 
-                (filterframe["y"] >= miny)]
-
-
-        filterframe["inbox"] = filterframe.apply(lambda i: polygon.contains(Point( (i.x, i.y))), axis = 1)
-        filterframe = filterframe[filterframe["inbox"] == True]
+        path = mpltPath.Path(polygon)
+        pointarr =[filterframe["x"].values, filterframe["y"].values]
+        tpointarr = map(list, zip(*pointarr))
+        framefilter = path.contains_points(tpointarr)
+        filterframe = filterframe[framefilter]
 
     return filterframe
 
@@ -233,6 +219,7 @@ for i in range(len(frameList)):
     polygon = None
     if bboxdata is not None:
         polygon = genPolygon(bboxdata.loc[framenum])
+
     
     depthdata = loadDepth.loadDepth(f, width, height)
     filterdepth = filterFrame(depthdata,
