@@ -108,14 +108,18 @@ for i in range(len(frameList)):
         print f
 
 print depthFrameData.shape
-n_components = 3
+n_components = 12 
 pca = PCA(n_components=n_components, svd_solver='randomized',
           whiten=True).fit(depthFrameData)
-eigenfaces = pca.components_.reshape((3, height, width))
+eigenfaces = pca.components_.reshape((n_components, height, width))
 
-plot_gallery("test", eigenfaces[:12], n_col=1, n_row=3)
+plot_gallery("test", eigenfaces[:n_components], n_col=4, n_row=3)
 #plot_gallery("frames", depthFrameData[:12], 4,3)
 plt.show()
+
+test_pca = pca.transform(depthFrameData)
+print test_pca
+print len(test_pca)
 
 #plt.plot(pca.explained_variance_)
 #plt.show()
