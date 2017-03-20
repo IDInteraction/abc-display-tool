@@ -574,7 +574,8 @@ else:
 
 if args.exporttree is not None:
     print "Saving tree"
-    tree.export_graphviz(decisionTree, out_file = args.exporttree) 
+    tree.export_graphviz(decisionTree, out_file = args.exporttree,
+        feature_names=list(trackingData.columns.values))
 
 
 if args.rngstate is not None:
