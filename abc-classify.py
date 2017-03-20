@@ -271,6 +271,7 @@ parser.add_argument("--videofile",
         help = "The input video file to classify")
 parser.add_argument("--trackerfile",
         dest = "trackerfile", type = str, required = True,
+        action="append",
         help = "The data from some object tracking software.  OpenFace and CppMT data will be handled appropriately.  Other data types will take the 1st colum as the frame number, and assume all other columns are required.")
 parser.add_argument("--startframe", type = int, required = False,
         help = "The frame of the video to start classifcation at.  Defaults to start of video")
@@ -278,7 +279,7 @@ parser.add_argument("--endframe",
         dest = "endframe", type = int, required = False,
         help = "The end frame to run classification on.  Defaults to the end of the video")
 parser.add_argument("--extgt", type = str, required = False,
-        help = "Whether to use an external ground truth file. (currently) assumed to have 6 columns; the first containing the video frame number, the sixth containing the state" )
+        help = "Whether to use an external ground truth file(s). (currently assumed to have 6 columns; the first containing the video frame number, the sixth containing the state" )
 parser.add_argument("--entergt",
         dest = "entergt", action="store_true",
         help = "Whether to interactively enter ground truth data.  For each frame enter a numeric state, c to classify or u to undo the previous frame")
@@ -386,7 +387,12 @@ else:
 
 print "Tracking between " + str(startVideoFrame) + " and " + str(endVideoFrame)
 
-trackingData = loadTrackingData(args.trackerfile)
+trackingData = loadTrackingData(args.trackerfile.pop())
+if len(args.trackerfile) > 0:
+    print "Loading additional tracking data"
+    additionalTracking = loadTrackingData(args.trackerfile.pop())
+    trackingData = trackingData.join(additionalTracking, how="inner") # Joins on index (i.e. frame)
+
 
 
 # We handle the training period by shuffling all the frames in the video
@@ -409,6 +415,7 @@ else:
 if args.extgt is not None:
     print "Loading external ground-truth file"
     externalGT = loadExternalGroundTruth(args.extgt)
+
 
     if len(trainingframes) > len(externalGT):
         print "External ground truth file has too few frames for training"
