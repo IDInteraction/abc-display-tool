@@ -6,4 +6,6 @@
 tags
 *.png
 *.mp4
-
+*.pyc
+*.swo
+*.dot
