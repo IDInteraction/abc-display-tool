@@ -27,8 +27,10 @@ def getDepthDimensions(depthfile):
 def loadDepth(infile, width=0, height=0):
     """Load a depth file"""
 
-    depths=pd.read_csv(infile, header=None, names=["depth"])
+    depths=pd.read_csv(infile, header=None, names=["depth"],
+        memory_map=True, engine="c")
     if width == 0 and height == 0:
+        print "Getting width and height - for speed, prespecify"
         (width, height) = getDepthDimensions(infile)
     depths["x"] =  range(width)  * height 
     depths["y"] = [item for item in range(height) for i in range(width)]
