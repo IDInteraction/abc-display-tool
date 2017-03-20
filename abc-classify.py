@@ -17,9 +17,8 @@ from sklearn import metrics
 import pickle
 import colorsys
 
-def loadTrackingData(infile,
-        guessClean = True):
-    indata = pd.read_csv(infile, index_col = 0)
+def loadTrackingData(infile, guessClean=True):
+    indata=pd.read_csv(infile, index_col=0)
     stripvals = [x.strip(' ') for x in indata.columns.values]
     indata.columns = stripvals
 
@@ -55,12 +54,12 @@ def loadTrackingData(infile,
 
     return indata
 
-def loadExternalGroundTruth(infile, format = "checkfile"):
+def loadExternalGroundTruth(infile, format="checkfile"):
     if format != "checkfile":
         print "Only checkfiles implemented"
 #        sys.exit()
     with open(infile, 'rb') as csvfile:
-        hasheader  = csv.Sniffer().has_header(csvfile.read(2048))
+        hasheader=csv.Sniffer().has_header(csvfile.read(2048))
         
 
     if hasheader:
@@ -272,7 +271,7 @@ parser.add_argument("--videofile",
         help = "The input video file to classify")
 parser.add_argument("--trackerfile",
         dest = "trackerfile", type = str, required = True,
-        help = "The data from some object tracking software.  Currently only OpenFace and CppMT data are supported")
+        help = "The data from some object tracking software.  OpenFace and CppMT data will be handled appropriately.  Other data types will take the 1st colum as the frame number, and assume all other columns are required.")
 parser.add_argument("--startframe", type = int, required = False,
         help = "The frame of the video to start classifcation at.  Defaults to start of video")
 parser.add_argument("--endframe",
