@@ -95,7 +95,7 @@ if args.numframes is not None:
 # GLOBAL!
 image_shape = (height, width)
 
-n_components = 12 
+n_components = 24 
 batch_size = 200
 ipca = IncrementalPCA(n_components = n_components,
         batch_size = batch_size, whiten = True)
@@ -129,9 +129,6 @@ if batchpos != 0:
 
 #pca = PCA(n_components=n_components, svd_solver='randomized',
 #          whiten=True).fit(depthFrameData)
-eigenfaces = ipca.components_.reshape((n_components, height, width))
-
-plot_gallery("test", eigenfaces[:n_components], n_col=4, n_row=3)
 #plot_gallery("frames", depthFrameData[:12], 4,3)
 
 # We now apply the transform to frame
@@ -166,6 +163,8 @@ if batchpos != 0:
 
 pca_components.to_csv(args.outfile)
 if args.showplot == True:
+        eigenfaces = ipca.components_.reshape((n_components, height, width))
+        plot_gallery("test", eigenfaces[:min(12,n_components)], n_col=4, n_row=3)
         plt.show()
 #plt.plot(pca.explained_variance_)
 #plt.show()
