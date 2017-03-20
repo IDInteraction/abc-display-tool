@@ -95,7 +95,7 @@ if args.numframes is not None:
 # GLOBAL!
 image_shape = (height, width)
 
-n_components = 12
+n_components = 12 
 batch_size = 200
 ipca = IncrementalPCA(n_components = n_components,
         batch_size = batch_size, whiten = True)
@@ -105,7 +105,6 @@ depthFrameData = np.zeros(shape = (batch_size, width*height))
 batchpos = 0
 for i in range(len(frameList)):
         f = frameList.iloc[i]
-        print f 
 
         depthFrame = loadDepth.loadDepth(f, width, height)
         depthFrame = loadDepth.filterFrame(depthFrame,
@@ -117,7 +116,7 @@ for i in range(len(frameList)):
         depthFrameData[batchpos,:] = depthFrame["depth"]
         batchpos = batchpos + 1
         if batchpos == batch_size: # Process batch
-            print "Processing batch"
+            print "Processing batch" + f
             ipca.partial_fit(depthFrameData)
             batchpos = 0
             print "Batch processed"
@@ -140,11 +139,10 @@ plot_gallery("test", eigenfaces[:n_components], n_col=4, n_row=3)
 cptnames = map(lambda x: "cpt" + str(x), range(n_components))
 pca_components = pd.DataFrame(index = frameList.index, columns = cptnames)
 pca_components.index.rename("frame", inplace = True)
-
+print "Saving"
 batchpos = 0
 for i in range(len(frameList)):
     f = frameList.iloc[i]
-    print f
     
     depthFrame = loadDepth.loadDepth(f, width, height)
     depthFrame = loadDepth.filterFrame(depthFrame,
@@ -155,7 +153,7 @@ for i in range(len(frameList)):
     depthFrameData[batchpos,:] = depthFrame["depth"]
     batchpos = batchpos + 1
     if batchpos == batch_size:
-        print "Saving batch"
+        print "Saving batch" + f
         batch_components = ipca.transform(depthFrameData)
         batch_index = frameList.index.values[((i+1)-batch_size):(i+1)]
         pca_components.loc[batch_index, cptnames] = batch_components
