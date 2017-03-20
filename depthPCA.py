@@ -4,7 +4,7 @@ the classifier"""
 import pandas as pd
 import numpy as np
 import loadDepth
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, IncrementalPCA
 import argparse
 import glob
 import re
@@ -50,6 +50,9 @@ parser.add_argument("--mindepth",
         dest = "mindepth", type = int, required = False)
 parser.add_argument("--maxdepth",
         dest = "maxdepth", type = int, required = False)
+parser.add_argument("--outfile",
+        dest = "outfile", type = str, required = True)
+parser.add_argument("--showplot", action = "store_true", required = False)
 
 
 
@@ -91,11 +94,18 @@ if args.numframes is not None:
 
 # GLOBAL!
 image_shape = (height, width)
-depthFrameData = np.zeros(shape = (len(frameList), width*height))
 
+n_components = 12
+batch_size = 200
+ipca = IncrementalPCA(n_components = n_components,
+        batch_size = batch_size, whiten = True)
+
+depthFrameData = np.zeros(shape = (batch_size, width*height))
+
+batchpos = 0
 for i in range(len(frameList)):
         f = frameList.iloc[i]
-        
+        print f 
 
         depthFrame = loadDepth.loadDepth(f, width, height)
         depthFrame = loadDepth.filterFrame(depthFrame,
@@ -104,22 +114,60 @@ for i in range(len(frameList)):
                 recodenulls = True,
                 recodevalue = 0)
 
-        depthFrameData[i,:] = depthFrame["depth"]
-        print f
+        depthFrameData[batchpos,:] = depthFrame["depth"]
+        batchpos = batchpos + 1
+        if batchpos == batch_size: # Process batch
+            print "Processing batch"
+            ipca.partial_fit(depthFrameData)
+            batchpos = 0
+            print "Batch processed"
+# Mop up remaining frames
+if batchpos != 0:
+    print "Partial batch processing"
+    ipca.partial_fit(depthFrameData[:batchpos,:])
+    print "Partial batch processed"
 
-print depthFrameData.shape
-n_components = 12 
-pca = PCA(n_components=n_components, svd_solver='randomized',
-          whiten=True).fit(depthFrameData)
-eigenfaces = pca.components_.reshape((n_components, height, width))
+
+#pca = PCA(n_components=n_components, svd_solver='randomized',
+#          whiten=True).fit(depthFrameData)
+eigenfaces = ipca.components_.reshape((n_components, height, width))
 
 plot_gallery("test", eigenfaces[:n_components], n_col=4, n_row=3)
 #plot_gallery("frames", depthFrameData[:12], 4,3)
-plt.show()
 
-test_pca = pca.transform(depthFrameData)
-print test_pca
-print len(test_pca)
+# We now apply the transform to frame
+# Define a pandas dataframe to hold the results for everything
+cptnames = map(lambda x: "cpt" + str(x), range(n_components))
+pca_components = pd.DataFrame(index = frameList.index, columns = cptnames)
+pca_components.index.rename("frame", inplace = True)
 
+batchpos = 0
+for i in range(len(frameList)):
+    f = frameList.iloc[i]
+    print f
+    
+    depthFrame = loadDepth.loadDepth(f, width, height)
+    depthFrame = loadDepth.filterFrame(depthFrame,
+                mindepth = args.mindepth, 
+                maxdepth = args.maxdepth,
+                recodenulls = True,
+                recodevalue = 0)
+    depthFrameData[batchpos,:] = depthFrame["depth"]
+    batchpos = batchpos + 1
+    if batchpos == batch_size:
+        print "Saving batch"
+        batch_components = ipca.transform(depthFrameData)
+        batch_index = frameList.index.values[((i+1)-batch_size):(i+1)]
+        pca_components.loc[batch_index, cptnames] = batch_components
+        batchpos = 0
+if batchpos != 0:
+        batch_components = ipca.transform(depthFrameData)
+        batch_index = frameList.index.values[(i-batchpos+1):(i+1)]
+        pca_components.loc[batch_index, cptnames] = batch_components[:batchpos,:]
+        
+
+pca_components.to_csv(args.outfile)
+if args.showplot == True:
+        plt.show()
 #plt.plot(pca.explained_variance_)
 #plt.show()
