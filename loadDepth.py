@@ -2,6 +2,7 @@
 
 """
 import pandas as pd
+import numpy as np
 
 
 def getDepthDimensions(depthfile):
@@ -35,14 +36,48 @@ def loadDepth(infile, width=0, height=0):
     return depths
 
 
+def filterFrame(inframe, mindepth = None, maxdepth = None, polygon = None,
+        recodenulls = False, recodevalue = np.nan):
+    """Filter a frame by depth and / or masking polygon"""
 
-#parser = argparse.ArgumentParser(description="Load depth data")
-#parser.add_argument("--depthfile", dest="depthfile", type = str, required = True);
-#
-#args = parser.parse_args()
-#
-#
-#depthData = loadDepth(args.depthfile)
-#
+    filterframe = inframe
+    #TODO could do these in one go if min and max defined
+    if mindepth is not None:
+        filterframe.loc[ filterframe["depth"] <= mindepth ,"depth"] = np.nan
 
+    if maxdepth is not None:
+        filterframe.loc[ filterframe["depth"] >= maxdepth,"depth"] = np.nan
 
+    if polygon is not None:
+        if recodenulls == True:
+            sys.exit("Still need to implement recodenulls with polygon filtering")
+            
+        # We filter the points in the bounding box in two stages;
+        # first a crude box based on the maximum extent of the polygon
+        # then using matplotlib to test the remaining points properly
+        # TODO Don't do part 2 if rotation is 0
+        xs = [p[0] for p in polygon]
+        ys = [p[1] for p in polygon]
+
+        minx=min(xs)
+        maxx=max(xs)
+        miny=min(ys)
+        maxy=max(ys)
+
+        filterframe = filterframe[(filterframe["x"] <= maxx) & 
+                (filterframe["x"] >= minx) &
+                (filterframe["y"] <= maxy) & 
+                (filterframe["y"] >= miny)]
+
+        path = mpltPath.Path(polygon)
+        pointarr =[filterframe["x"].values, filterframe["y"].values]
+        tpointarr = map(list, zip(*pointarr))
+        framefilter = path.contains_points(tpointarr)
+        filterframe = filterframe[framefilter]
+
+    if recodenulls == False:
+        filterframe = filterframe[pd.notnull(filterframe["depth"])]
+    else:
+        filterframe.loc[pd.isnull(filterframe["depth"]),"depth"] = recodevalue
+
+    return filterframe
