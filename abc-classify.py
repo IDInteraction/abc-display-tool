@@ -388,13 +388,13 @@ else:
 print "Tracking between " + str(startVideoFrame) + " and " + str(endVideoFrame)
 
 trackingData = loadTrackingData(args.trackerfile.pop())
-if len(args.trackerfile) > 0:
+while len(args.trackerfile) > 0:
     print "Loading additional tracking data"
     additionalTracking = loadTrackingData(args.trackerfile.pop())
     trackingData = trackingData.join(additionalTracking, how="inner") # Joins on index (i.e. frame)
 
-
-
+print "The following columns are available to the classifier"
+print trackingData.columns.values
 # We handle the training period by shuffling all the frames in the video
 # We can then work our way through the list as required, to avoid re-drawing the sample
 # and risking classifying the same frame twice etc.
@@ -583,3 +583,5 @@ if args.rngstate is not None:
     state = np.random.get_state()
     with open(args.rngstate, 'wb') as output:
         pickle.dump(state, output, pickle.HIGHEST_PROTOCOL)
+
+
