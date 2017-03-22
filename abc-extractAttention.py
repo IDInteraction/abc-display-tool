@@ -118,6 +118,7 @@ def getMaxTime(attentionFile, participant):
     return maxtime
 
 def getOffset(offsetfile, participant):
+    print "TODO put in library"
     offsets = pd.read_csv(offsetfile)
 
     offsetrow = offsets[offsets["participantCode"] == participant]
@@ -133,6 +134,7 @@ def getOffset(offsetfile, participant):
 def loadFramemap(mapfile, frameOffset):
 
 
+    print "TOOD put this in a library!"
     framemap = pd.read_csv(mapfile,
         header = None, names = ["kinectframe", "frametime"])
 
@@ -313,9 +315,10 @@ outdata["frame"] = outdata["frame"] + 1
 
 # This is all in webcam-frames.  If we have defined a kinect mapping
 # we need to output in this
-if framemap is not None:
+if args.framemap is not None:
     outdata = outdata.merge(framemap[["webcamframe", "kinectframe"]],
              left_on="frame",right_on="webcamframe", sort = True) 
+    print outdata
     del outdata['webcamframe']
     outdata["frame"] = outdata["kinectframe"]
     del outdata["kinectframe"]
@@ -329,5 +332,6 @@ if args.skipfile is not None:
 
 else:
     outdata.to_csv(args.outputfile, index = False)
+    print outdata
 
 
