@@ -17,10 +17,6 @@ import pandas as pd
 fps = 30
 def loadData(inputFileName):
     indata = pd.read_csv(inputFileName, index_col = 0)
-    print "DEBUG - dropping some columns"
-    coldel = [  "cpt" + str(x) for x in range(1,15)]
-
-    indata = indata.drop(coldel, axis=1)
     print "Loaded input data"
     print "Using " + indata.index.name + " as index"
 
@@ -51,24 +47,32 @@ def loadFramemap(mapfile, frameOffset):
 
     return framemap
 
-def kinect2webcam(originalData, framemap, offset):
+def webcam2kinect(originalData, framemap):
+    return remap(originalData, framemap, "webcamframe", "kinectframe")
+
+def kinect2webcam(originalData, framemap):
+    return remap(originalData, framemap, "kinectframe", "webcamframe")
+
+def remap(originalData, framemap, fromvar, tovar):
     """ Convert kinect frames to webcam frames"""
-    # We put the index into a normal column for the join
-    # otherwise things get confusing with which index gets used
-    originalData["origframe"] = originalData.index.values
-    outdata = pd.merge(originalData, 
-            framemap[["webcamframe", "kinectframe"]],
+    # Copy the original data before we start adding new data
+    originalCopy = originalData.copy()
+    # Put the index into a normal column
+    originalCopy["origframe"] = originalData.index.values
+    outdata = pd.merge(originalCopy, 
+            framemap[[tovar, fromvar]],
             left_on = "origframe",
-            right_on = "kinectframe",
+            right_on = tovar,
             sort = True
             )
 
-    outdata["frame"] = outdata["webcamframe"]
-    del outdata["kinectframe"]
-    del outdata["webcamframe"]
+    outdata["frame"] = outdata[tovar]
+    del outdata[fromvar]
+    del outdata[tovar]
     del outdata["origframe"]
     outdata.set_index("frame", inplace = True, verify_integrity =True)
-    print "k2w converted with " + str(len(outdata)) + " rows"
+    print "converted from " + fromvar + " to " + tovar +  \
+        " with " + str(len(outdata)) + " rows"
     outdata.dropna(inplace = True)
     print str(len(outdata)) + " rows after deleting NAs"
 
@@ -110,6 +114,11 @@ if __name__ == "__main__":
             type = str,
             required = True,
             help = "A list of Kinect frames and their corresponding time")
+    parser.add_argument("--test",
+            dest = "test",
+            action = "store_true",
+            required = False)
+        
 
     # TODO Allow offset to be specified on command line
     parser.add_argument("--frameoffsetfile",
@@ -130,17 +139,35 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    originalData = loadData(args.infile)
+    inputdata = loadData(args.infile)
     offset = getOffset(args.frameoffsetfile, args.participant)
     framemap = loadFramemap(args.framemap, offset)
 
+    if args.test == True:
+        print "Test mode - converting w2k and back"
+        midData = webcam2kinect(inputdata, framemap)
+        finData = kinect2webcam(midData, framemap)
+
+        if inputdata.equals(finData):
+            print "Successfully converted w2k and back"
+        else:
+            if set(inputdata.columns) & set(finData.columns):
+                print "Column names differ"
+            if inputdata.index.name != finData.index.name:
+                print "Index name differs"
+            if len(inputdata) != len(finData):
+                print "Number of rows differ.  This may be due to skips in kinect data"
+                
+
+        quit()
+
     if args.convertToKinect == True:
         print "Converting webcam to kinect"
-        sys.exit("Not yet implemented")
+        outdata = webcam2kinect(inputdata, framemap)
 
     else:
         print "Converting kinect to webcam"
-        outdata = kinect2webcam(originalData, framemap, offset)
+        outdata = kinect2webcam(inputdata, framemap)
         
     outdata.to_csv(args.outfile)
 
