@@ -435,8 +435,9 @@ if args.extgt is not None:
     if len(trainingframes) > len(externalGT):
         print "External ground truth file has too few frames for training"
         quit()
-    if not set(range(args.startframe, args.endframe+1)).issubset(externalGT.index):
-        print "External ground truth not provided for all frames in range"
+    if not set(trainingframes).issubset(externalGT.index):
+        print "External ground truth not provided for all frames with tracking data"
+        print list(set(trainingframes) - set(externalGT.index))
         quit()
 
 
