@@ -62,7 +62,7 @@ def remap(originalData, framemap, fromvar, tovar):
     outdata = pd.merge(originalCopy, 
             framemap[[tovar, fromvar]],
             left_on = "origframe",
-            right_on = tovar,
+            right_on = fromvar,
             sort = True
             )
 
@@ -138,6 +138,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     inputdata = loadData(args.infile)
+    
+    inputrows = len(inputdata)
+   
     offset = getOffset(args.frameoffsetfile, args.participant)
     framemap = loadFramemap(args.framemap, offset)
 
@@ -155,11 +158,16 @@ if __name__ == "__main__":
                 print "Index name differs"
             if len(inputdata) != len(finData):
                 print "Number of rows differ.  This may be due to skips in kinect data"
-                
+       
+        if inputdata.equals(midData):
+            print "initial data = w2k data"
+            print "conversion failed"
+        if midData.equals(finData):
+            print "Intermediate step = k2w data"
+            print "conversion failed"
 
         quit()
     
-    inputrows = len(inputdata)
 
     if args.convertToKinect == True:
         print "Converting webcam to kinect"
@@ -175,7 +183,7 @@ if __name__ == "__main__":
         print "Number of rows on input and output differ"
         print "Input: " + str(inputrows)
         print "Output: " + str(outputrows)
-        print str(inputrows - outputrows) + " frames lost"
+        print args.infile  + " " + str(inputrows - outputrows) + " frames lost"
         
     outdata.to_csv(args.outfile)
 
