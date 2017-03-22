@@ -73,8 +73,6 @@ def remap(originalData, framemap, fromvar, tovar):
     outdata.set_index("frame", inplace = True, verify_integrity =True)
     print "converted from " + fromvar + " to " + tovar +  \
         " with " + str(len(outdata)) + " rows"
-    outdata.dropna(inplace = True)
-    print str(len(outdata)) + " rows after deleting NAs"
 
     return outdata
 
@@ -160,6 +158,8 @@ if __name__ == "__main__":
                 
 
         quit()
+    
+    inputrows = len(inputdata)
 
     if args.convertToKinect == True:
         print "Converting webcam to kinect"
@@ -168,6 +168,14 @@ if __name__ == "__main__":
     else:
         print "Converting kinect to webcam"
         outdata = kinect2webcam(inputdata, framemap)
+
+    outputrows = len(outdata)
+
+    if inputrows != outputrows:
+        print "Number of rows on input and output differ"
+        print "Input: " + str(inputrows)
+        print "Output: " + str(outputrows)
+        print str(inputrows - outputrows) + " frames lost"
         
     outdata.to_csv(args.outfile)
 
