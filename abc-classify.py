@@ -325,6 +325,12 @@ parser.set_defaults(includegt=False)
 parser.add_argument("--exporttree",
         dest = "exporttree", type = str, required = False)
 
+parser.add_argument("--maxmissing",
+        dest = "maxmissing", type = int,
+        required = False, default = 0,
+        help = "The maximum number of missing frames to allow.  Useful if using data derived from the Kinect, where frames are occasionally dropped")
+
+
 
 args = parser.parse_args()
 
@@ -399,9 +405,18 @@ print trackingData.columns.values
 # We can then work our way through the list as required, to avoid re-drawing the sample
 # and risking classifying the same frame twice etc.
 trainingframes = range(startVideoFrame, endVideoFrame+1)
+
 if not set(trainingframes).issubset(trackingData.index):
     print "Don't have tracking data for each frame"
-    quit()
+    if len(set(trainingframes) - set(trackingData.index)) > args.maxmissing:
+        print "Too many missing frames:"
+        print list(set(trainingframes) - set(trackingData.index))
+        quit()
+    else:
+        print str(len(set(trainingframes) - set(trackingData.index))) + " frames missing"
+
+        print "Dropping frames with no tracking data"
+        trainingframes[:] = [i for i in trainingframes if i in trackingData.index]
     
 
 if args.shuffle:
