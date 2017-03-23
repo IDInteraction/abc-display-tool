@@ -14,6 +14,7 @@ from sklearn.model_selection import ShuffleSplit
 from sklearn.model_selection import KFold
 from sklearn import preprocessing
 from sklearn import metrics
+from sklearn.ensemble import RandomForestClassifier
 import pickle
 import colorsys
 
@@ -113,7 +114,10 @@ def getMultiVideoFrame(videosrc, frameNumber):
 
 def runClassifier(traininggroundtruth, trainingtrackingdata):
 
-    decisionTree = DecisionTreeClassifier()
+    if args.forest == 1:
+        decisionTree = DecisionTreeClassifier()
+    else:
+        decisionTree = RandomForestClassifier(n_estimators = args.forest)
 
     trainedframescount  = len(traininggroundtruth)
     if len(trainingtrackingdata.index) != trainedframescount:
@@ -330,6 +334,12 @@ parser.add_argument("--maxmissing",
         required = False, default = 0,
         help = "The maximum number of missing frames to allow.  Useful if using data derived from the Kinect, where frames are occasionally dropped")
 
+parser.add_argument("--forest",
+        dest = "forest", type = int,
+        required = False, default = 1,
+        help = "Number of trees in the forest")
+
+
 
 
 args = parser.parse_args()
@@ -410,7 +420,8 @@ if not set(trainingframes).issubset(trackingData.index):
     print "Don't have tracking data for each frame"
     if len(set(trainingframes) - set(trackingData.index)) > args.maxmissing:
         print "Too many missing frames:"
-        print list(set(trainingframes) - set(trackingData.index))
+        # Print this as a numpy array to abbreviate if there are lots
+        print np.array(list(set(trainingframes) - set(trackingData.index)))
         quit()
     else:
         print str(len(set(trainingframes) - set(trackingData.index))) + " frames missing"
@@ -590,8 +601,20 @@ else:
 
 if args.exporttree is not None:
     print "Saving tree"
-    tree.export_graphviz(decisionTree, out_file = args.exporttree,
-        feature_names=list(trackingData.columns.values))
+    if type(decisionTree).__name__ == "DecisionTreeClassifier":
+            tree.export_graphviz(decisionTree, out_file = args.exporttree,
+                feature_names=list(trackingData.columns.values))
+    elif type(decisionTree).__name__ == "RandomForestClassifier":
+        treenum = 0
+        for dtree in decisionTree.estimators_:
+            tree.export_graphviz(dtree,
+                    out_file = str(treenum) + args.exporttree,
+                    feature_names=list(trackingData.columns.values))
+            treenum += 1
+
+
+    else:
+        sys.exit("Invalid classifier object")
 
 
 if args.rngstate is not None:
