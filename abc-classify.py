@@ -209,7 +209,7 @@ def playbackPredictions(vidsource, predictions, startframe, endframe,
 
 
     if endframe - startframe != len(predictions):
-            print "Video period of interest is " + chr(endframe - startframe) + " frames, but have predictions for " + chr(len(predictions)) + " frames"
+            print "Video period of interest is " + str(endframe - startframe) + " frames, but have predictions for " + str(len(predictions)) + " frames"
 
 
     # http://stackoverflow.com/questions/876853/generating-color-ranges-in-python
