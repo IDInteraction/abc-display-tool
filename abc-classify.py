@@ -475,7 +475,7 @@ if args.entergt:
             decisionTree = runClassifier(groundtruth[:(trainedframescount)],
                     trackingData.loc[trainingframes[:(trainedframescount)]])
 
-            (meanAc, stdAc)  = getAccuracyCrossVal(decisionTree,
+            (meanAc, stdAc, nowhere, nowhere)  = getAccuracyCrossVal(decisionTree,
                     groundtruth[:trainedframescount],
                     trackingData.loc[trainingframes[:trainedframescount]])
             print("Crossval Accuracy: Mean: %0.3f, Std: %0.3f" % (meanAc, stdAc))
