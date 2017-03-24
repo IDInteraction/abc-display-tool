@@ -508,6 +508,18 @@ if args.entergt:
         elif(chr(key) == 'm'):
             getmulti = True
         elif(chr(key) == 'q'):
+            if args.outfile is not None:
+                print "Saving predictions"
+                decisionTree = runClassifier(groundtruth[:(trainedframescount)],
+                    trackingData.loc[trainingframes[:(trainedframescount)]])
+                if args.includegt:
+                    savePredictions(decisionTree,  trackingData, trainingframes[trainedframescount:],
+                            args.outfile,
+                            groundtruthframes = trainingframes[:trainedframescount],
+                            groundtruth = groundtruth[:trainedframescount])
+                else:
+                    savePredictions(decisionTree,  trackingData, trainingframes[trainedframescount:],
+                            args.outfile)
             print "Exiting"
             sys.exit()
         elif(chr(key) == 'u'):
