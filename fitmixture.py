@@ -161,7 +161,7 @@ if args.bbox is not None:
 
 fitframe = loadDepth.loadDepth(frameList.iloc[0], width, height)
 
-filterdepth = filterFrame(fitframe, 
+filterdepth = loadDepth.filterFrame(fitframe, 
         mindepth = mindepth,
         maxdepth = maxdepth,
         polygon = polygon)
@@ -208,7 +208,7 @@ for i in range(len(frameList)):
 
     
     depthdata = loadDepth.loadDepth(f, width, height)
-    filterdepth = filterFrame(depthdata,
+    filterdepth = loadDepth.filterFrame(depthdata,
             mindepth = mindepth,
             maxdepth = maxdepth,
             polygon = polygon)
