@@ -56,8 +56,6 @@ parser.add_argument("--showplot", action = "store_true", required = False)
 parser.add_argument("--components", type = int, required = False, default = 24)
 parser.add_argument("--batch", type = int, required = False, default = 200)
 
-
-
 args = parser.parse_args()
 
 if args.shuffle == False and args.numframes is not None:
@@ -97,7 +95,7 @@ if args.numframes is not None:
 # GLOBAL!
 image_shape = (height, width)
 
-n_components = args.numcomponents
+n_components = args.components
 batch_size = args.batch
 
 ipca = IncrementalPCA(n_components = n_components,
