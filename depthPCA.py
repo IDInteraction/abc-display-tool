@@ -53,6 +53,8 @@ parser.add_argument("--maxdepth",
 parser.add_argument("--outfile",
         dest = "outfile", type = str, required = True)
 parser.add_argument("--showplot", action = "store_true", required = False)
+parser.add_argument("--components", type = int, required = False, default = 24)
+parser.add_argument("--batch", type = int, required = False, default = 200)
 
 
 
@@ -95,8 +97,9 @@ if args.numframes is not None:
 # GLOBAL!
 image_shape = (height, width)
 
-n_components = 24 
-batch_size = 200
+n_components = args.numcomponents
+batch_size = args.batch
+
 ipca = IncrementalPCA(n_components = n_components,
         batch_size = batch_size, whiten = True)
 
