@@ -9,6 +9,7 @@ import argparse
 import glob
 import re
 import matplotlib.pyplot as plt
+import pickle
 
 
 # from http://scikit-learn.org/stable/auto_examples/decomposition/plot_faces_decomposition.html#sphx-glr-auto-examples-decomposition-plot-faces-decomposition-py
@@ -55,8 +56,14 @@ parser.add_argument("--outfile",
 parser.add_argument("--showplot", action = "store_true", required = False)
 parser.add_argument("--components", type = int, required = False, default = 24)
 parser.add_argument("--batch", type = int, required = False, default = 200)
+parser.add_argument("--pickle", type= str, required = False, default = "args.pickle")
 
 args = parser.parse_args()
+
+# Output filearguments 
+# Protocol 0 of pickle is (kind of) human readable
+with open(args.pickle, "wb") as fileHandle:
+    pickle.dump(args.__dict__, fileHandle, protocol = 0)
 
 if args.shuffle == False and args.numframes is not None:
         sys.exit("Cannot specify number of frames if not shuffling")
