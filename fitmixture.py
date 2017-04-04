@@ -202,7 +202,7 @@ if args.numcomponents == 0:
         componentFrames = frameList.sample(frac=1)[:args.componentsample]
 
     for i, componentFrame in componentFrames.iteritems():
-        print "Using frame " + str(i) + " to set BIC" 
+        print "Using frame " + str(i) + " to estimate number of components" 
         fitframe = loadDepth.loadDepth(componentFrame, width, height)
 
         if args.bbox is not None:
@@ -221,19 +221,31 @@ if args.numcomponents == 0:
                 polygon = polygon)
         BIC= [m.bic(filterdepth["depth"].reshape(-1,1)) for m in models]
 
-        with open("BICtest.txt", "a") as f:
-            f.writelines(str(item) + "," for item in BIC)
-            f.write("\n")
-        
-        componentVotes.append(components[np.argmin(BIC)])
+        # Plotting the BICS we see several local minima; the first of these
+        # looks to provide a reasonable fit to the histogram, (hopefully) without
+        # overfitting 
+        # Though BIC *should* take account of complexity and fit anyway
+
+        # TODO Stop as soon as BIC starts increasing, rather than calculating
+        # for all components
+        bestBIC = float("inf")
+
+        for idx, thisBIC in enumerate(BIC):
+            if thisBIC < bestBIC:
+                bestBIC = thisBIC
+                theseComponents = components[idx]
+            else:
+                break # BIC going up again
+
+        componentVotes.append(theseComponents)
+#        componentVotes.append(components[np.argmin(BIC)])
     print componentVotes
     n_components = most_common(componentVotes)
-    print n_components
+    print "Components set to: " + str(n_components)
 else:
     print "Setting num components from command line"
     n_components = args.numcomponents
 
-quit()
 print "Fitting all frames with ", n_components, " components"
 results = []
 maxheight = 1 # for plotting; is set to max value of 1st frame
