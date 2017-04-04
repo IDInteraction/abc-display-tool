@@ -86,7 +86,23 @@ def depthImage(filteredframe, width, height):
 
     return(fullframe)
 
+def processFrame(frame, mindepth, maxdepth, polygon, components):
+    """ given a loaded frame, filter by depth (and optionally bbox), 
+    and then fit a mixture model with the specified number of components"""
+    
+    filterdepth = loadDepth.filterFrame(frame, 
+            mindepth = mindepth,
+            maxdepth = maxdepth,
+            polygon = polygon)
 
+    model = mixture.GaussianMixture(n_components = components)
+    model.fit(filterdepth["depth"].reshape(-1,1))
+
+    return model
+
+def most_common(lst):
+    """http://stackoverflow.com/questions/1518522/python-most-common-element-in-a-list"""
+    return max(set(lst), key=lst.count)
 #########################################
 
 np.random.seed(0)
@@ -109,6 +125,13 @@ parser.add_argument("--outframefile",
         dest = "outframefile", type= str, required = False)
 parser.add_argument("--numcomponents"
         , dest = "numcomponents", type=int, required = False, default = 0)
+parser.add_argument("--componentsample", type = int,
+        required = False,
+        help = "The number of frames to sample to determine the number of components")
+parser.add_argument("--maxcomponents", type = int, required = False,
+        default = 8,
+        help = "The maximum number of components to try and fit when estimating optimum number via BIC")
+
 parser.add_argument("--bbox"
         , dest = "bbox", type=str, required = False)
 parser.add_argument("--startframe",
@@ -119,6 +142,8 @@ parser.add_argument("--pickle", type = str, required = False,
         default = "args.pickle")
 
 args = parser.parse_args()
+if args.componentsample is not None and args.numcomponents != 0:
+    sys.exit("Cannot specify number of components if determining number of components from frame sample")
 with open(args.pickle, "wb") as fileHandle:
     pickle.dump(args.__dict__, fileHandle, protocol = 0)
 
@@ -161,35 +186,54 @@ if args.bbox is not None:
     # check we have tracking data for all these frames 
     if not set(frameList.index).issubset(bboxdata.index):
         sys.exit("Don't have tracking frames for all frames of interest")
-    polygon = genPolygon(bboxdata.iloc[frameList.index[0]])
-    print "Using frame " + str(frameList.index[0]) + " as reference"
-
-fitframe = loadDepth.loadDepth(frameList.iloc[0], width, height)
-
-filterdepth = loadDepth.filterFrame(fitframe, 
-        mindepth = mindepth,
-        maxdepth = maxdepth,
-        polygon = polygon)
 
 
 
+componentVotes = [] # List of "votes" for optimum number of components in each frame
 if args.numcomponents == 0:
-    print "Setting num components automatically via BIC"
-    components = np.arange(1,8)
-    models = [None for i in range(len(components))]
+    if args.componentsample is None:
+        print "Setting num components automatically via BIC from 1st frame"
+        componentFrames = frameList[0:1]
+    
+    else:
+        if args.componentsample < 1:
+            sys.exit("Must sample 1 or more frames")
+        # Get a random sample of frames
+        componentFrames = frameList.sample(frac=1)[:args.componentsample]
 
-    for c in range(len(components)):
-        models[c] = mixture.GaussianMixture(n_components = components[c])
-        models[c].fit(filterdepth["depth"].reshape(-1,1))
+    for i, componentFrame in componentFrames.iteritems():
+        print "Using frame " + str(i) + " to set BIC" 
+        fitframe = loadDepth.loadDepth(componentFrame, width, height)
+
+        if args.bbox is not None:
+            polygon = genPolygon(bboxdata.iloc[i])
+        else:
+            polygon = None
         
-    BIC = [m.bic(filterdepth["depth"].reshape(-1,1)) for m in models]
+        components = np.arange(1,args.maxcomponents)
+        models = [None for i in range(len(components))]
 
-    n_components = components[np.argmin(BIC)]
+        for idx, c in enumerate(components):
+            models[idx] = processFrame(fitframe, mindepth, maxdepth, polygon, c)       
+        filterdepth = loadDepth.filterFrame(fitframe, 
+                mindepth = mindepth,
+                maxdepth = maxdepth,
+                polygon = polygon)
+        BIC= [m.bic(filterdepth["depth"].reshape(-1,1)) for m in models]
+
+        with open("BICtest.txt", "a") as f:
+            f.writelines(str(item) + "," for item in BIC)
+            f.write("\n")
+        
+        componentVotes.append(components[np.argmin(BIC)])
+    print componentVotes
+    n_components = most_common(componentVotes)
+    print n_components
 else:
     print "Setting num components from command line"
     n_components = args.numcomponents
 
-
+quit()
 print "Fitting all frames with ", n_components, " components"
 results = []
 maxheight = 1 # for plotting; is set to max value of 1st frame
