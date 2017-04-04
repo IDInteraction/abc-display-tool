@@ -12,6 +12,7 @@ import math
 import argparse
 from itertools import chain
 import pickle
+import os
 
 GRAY =   '#999999'
 def genPolygon(inrow):
@@ -138,14 +139,17 @@ parser.add_argument("--startframe",
         dest = "startframe", type = int, required = True)
 parser.add_argument("--endframe",
         dest = "endframe", type = int, required = True)
-parser.add_argument("--pickle", type = str, required = False,
-        default = "args.pickle")
+parser.add_argument("--pickle", action='store_true',
+    help = "Store the arguments as a pickle file") 
 
 args = parser.parse_args()
 if args.componentsample is not None and args.numcomponents != 0:
     sys.exit("Cannot specify number of components if determining number of components from frame sample")
-with open(args.pickle, "wb") as fileHandle:
-    pickle.dump(args.__dict__, fileHandle, protocol = 0)
+
+if args.pickle:    
+    pickleName =  os.path.splitext(args.outfile)[0] + ".pickle"
+    with open(pickleName, "wb") as fileHandle:
+        pickle.dump(args.__dict__, fileHandle, protocol = 0)
 
 framerange = range(args.startframe, args.endframe + 1)
 #  series with index being frame number and value being filename
