@@ -254,7 +254,6 @@ print "Fitting all frames with ", n_components, " components"
 results = []
 maxheight = 1 # for plotting; is set to max value of 1st frame
 heightset = False
-fig = plt.figure()
 
 
 for i in range(len(frameList)):
