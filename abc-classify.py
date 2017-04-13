@@ -309,6 +309,15 @@ parser.add_argument("--rngstate",
         dest="rngstate", type=str, required = False,
         help = "Load a random number state file, if it exists.  If it does not exist, write the closing rng state to the file.")
 
+parser.add_argument("--chainrngstate",
+        dest="chainrngstate", action="store_true", required = False,
+        help = "Whether to chain the random number state; i.e. save the state at the end of the run to the file specified in rngstate.  ")
+
+parser.add_argument("--nochainrngstate",
+        dest="chainrngstate", action="store_false", required = False,
+        help = "Don't chain the RNG state.  Load the state from the file specified in rngstate if it exists.  Otherwise, seed randomly and save the seed to the file specified in rngstate")
+parser.set_defaults(chainrngstate=True)
+
 parser.add_argument("--summaryfile",
         dest = "summaryfile", type = str, required = False,
         help = "A text file to append summary information from the run to.  Currently records participantCode, trainingframes, startframe, endframe, accuracy (local), accuracy (external)")
@@ -344,6 +353,8 @@ parser.add_argument("--forest",
 
 args = parser.parse_args()
 
+
+
 if args.videofile is None and args.extgt is None:
     print "A video file is required if not usin an external ground truth file"
     sys.exit()
@@ -372,6 +383,10 @@ if args.rngstate is not None:
         print "Random state file not found - setting"
         np.random.seed()
         state = np.random.get_state()
+        if not args.chainrngstate:
+            print "Saving initial random seed"
+            with open(args.rngstate, 'wb') as output:
+                pickle.dump(state, output, pickle.HIGHEST_PROTOCOL)
 
 videoFile = cv2.VideoCapture(args.videofile)
 
@@ -630,9 +645,12 @@ if args.exporttree is not None:
 
 
 if args.rngstate is not None:
-    print "Saving final RNG state"
-    state = np.random.get_state()
-    with open(args.rngstate, 'wb') as output:
-        pickle.dump(state, output, pickle.HIGHEST_PROTOCOL)
+    if args.chainrngstate:
+        print "Saving final RNG state"
+        state = np.random.get_state()
+        with open(args.rngstate, 'wb') as output:
+            pickle.dump(state, output, pickle.HIGHEST_PROTOCOL)
+    else:
+        print "Not chaining RNG state"
 
 
