@@ -2,13 +2,15 @@
 # from the Kinect Data
 
 import argparse
-
+import matplotlib.pyplot as plt
 import pandas as pd
 
 parser=argparse.ArgumentParser(description = "Count the number of missing frames")
 
 parser.add_argument("--infile", type = str, required = True)
 parser.add_argument("--fps", type = int, default = 30, required = False)
+parser.add_argument("--showplot", action="store_true")
+parser.set_defaults(showplot=False)
 args = parser.parse_args()
 
 
@@ -26,3 +28,8 @@ droppedframes = lastrow["expectedframe"] - lastrow["frame"]
 
 print ("%s, %f, %i" % (args.infile, biggestgap, droppedframes))
 
+if args.showplot == True:
+    plt.plot(framemap["expectedframe"], (framemap["frame"] - framemap["expectedframe"])*(1/30.0))
+    plt.ylabel("drift (seconds)")
+    plt.xlabel("expected frame number")
+    plt.show()
