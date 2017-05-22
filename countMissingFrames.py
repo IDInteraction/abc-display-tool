@@ -10,6 +10,10 @@ parser=argparse.ArgumentParser(description = "Count the number of missing frames
 parser.add_argument("--infile", type = str, required = True)
 parser.add_argument("--fps", type = int, default = 30, required = False)
 parser.add_argument("--showplot", action="store_true")
+parser.add_argument("--calcnotionalframes", type = str, required = False,
+    help = """Calculate the notional kinect frames, given a comma separated list 
+    of observed Kinect frames.  In other words, what would be the frame number of kinect frame 'k'
+    if there hand't been any skips""")
 parser.set_defaults(showplot=False)
 args = parser.parse_args()
 
@@ -33,3 +37,12 @@ if args.showplot == True:
     plt.ylabel("drift (seconds)")
     plt.xlabel("expected frame number")
     plt.show()
+
+
+if args.calcnotionalframes is not None:
+    frames = [int(x) for x in args.calcnotionalframes.split(",")]
+    print frames
+    print ("%s,%s" % ("observed", "expected"))
+    for f in frames:
+       expectedframe =  framemap["expectedframe"][framemap["frame"] == f].iloc[0]
+       print ("%i,%i" % (f, expectedframe))
