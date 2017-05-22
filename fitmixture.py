@@ -106,7 +106,6 @@ def most_common(lst):
     return max(set(lst), key=lst.count)
 #########################################
 
-np.random.seed(0)
 
 parser = argparse.ArgumentParser(description = "Load depth data, and fit mixture model")
 
@@ -142,7 +141,40 @@ parser.add_argument("--endframe",
 parser.add_argument("--pickle", action='store_true',
     help = "Store the arguments as a pickle file") 
 
+parser.add_argument("--rngstate",
+        dest="rngstate", type=str, required = False,
+        help = "Load a random number state file, if it exists.  If it does not exist, write the closing rng state to the file.")
+
+parser.add_argument("--chainrngstate",
+        dest="chainrngstate", action="store_true", required = False,
+        help = "Whether to chain the random number state; i.e. save the state at the end of the run to the file specified in rngstate.  ")
+
+parser.add_argument("--nochainrngstate",
+        dest="chainrngstate", action="store_false", required = False,
+        help = "Don't chain the RNG state.  Load the state from the file specified in rngstate if it exists.  Otherwise, seed randomly and save the seed to the file specified in rngstate")
+parser.set_defaults(chainrngstate=True)
+
+
 args = parser.parse_args()
+
+
+if args.rngstate is not None:
+    if os.path.isfile(args.rngstate):
+        print "Saved random state exits; loading"
+        with open(args.rngstate, 'rb') as input:
+            state = pickle.load(input)
+        np.random.set_state(state)
+    else:
+        print "Random state file not found - setting"
+        np.random.seed()
+        state = np.random.get_state()
+        if not args.chainrngstate:
+            print "Saving initial random seed"
+            with open(args.rngstate, 'wb') as output:
+                pickle.dump(state, output, pickle.HIGHEST_PROTOCOL)
+
+
+
 if args.componentsample is not None and args.numcomponents != 0:
     sys.exit("Cannot specify number of components if determining number of components from frame sample")
 
@@ -325,6 +357,14 @@ df = df.set_index("frame", verify_integrity = True)
 
 df.to_csv(args.outfile)
 
+if args.rngstate is not None:
+    if args.chainrngstate:
+        print "Saving final RNG state"
+        state = np.random.get_state()
+        with open(args.rngstate, 'wb') as output:
+            pickle.dump(state, output, pickle.HIGHEST_PROTOCOL)
+    else:
+        print "Not chaining RNG state"
 
 
 
