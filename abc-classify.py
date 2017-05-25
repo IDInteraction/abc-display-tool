@@ -19,6 +19,7 @@ import pickle
 import colorsys
 
 def loadTrackingData(infile, guessClean=True):
+    print "Loading tracking data from: " + infile
     indata=pd.read_csv(infile, index_col=0)
     stripvals = [x.strip(' ') for x in indata.columns.values]
     indata.columns = stripvals
