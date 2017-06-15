@@ -264,7 +264,12 @@ def playbackPredictions(vidsource, predictions, startframe, endframe,
     cv2.waitKey(0)
     cv2.destroyWindow("Playback")
 
+def getTableSuffix(filename):
+    """ Extract just the filename from the filepath, and only keep alphanumeric 
+    characters """
+    filename = re.sub('[\W]+', '', os.path.basename(filename))
 
+    return filename
 
 
 ##############################################
@@ -422,8 +427,9 @@ print "Tracking between " + str(startVideoFrame) + " and " + str(endVideoFrame)
 trackingData = loadTrackingData(args.trackerfile.pop())
 while len(args.trackerfile) > 0:
     print "Loading additional tracking data"
-    additionalTracking = loadTrackingData(args.trackerfile.pop())
-    trackingData = trackingData.join(additionalTracking, how="inner") # Joins on index (i.e. frame)
+    additionalTrackingFile = args.trackerfile.pop()
+    additionalTracking = loadTrackingData(additionalTrackingFile)
+    trackingData = trackingData.join(additionalTracking, how="inner", rsuffix=getTableSuffix(additionalTrackingFile)) # Joins on index (i.e. frame)
 
 print "The following columns are available to the classifier"
 print trackingData.columns.values
