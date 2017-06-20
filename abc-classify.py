@@ -439,14 +439,15 @@ print trackingData.columns.values
 trainingframes = range(startVideoFrame, endVideoFrame+1)
 
 if not set(trainingframes).issubset(trackingData.index):
+    missingframecount = len(set(trainingframes) - set(trackingData.index))
     print "Don't have tracking data for each frame"
-    if len(set(trainingframes) - set(trackingData.index)) > args.maxmissing:
+    if missingframecount > args.maxmissing:
         print "Too many missing frames:"
         # Print this as a numpy array to abbreviate if there are lots
         print np.array(list(set(trainingframes) - set(trackingData.index)))
         quit()
     else:
-        print str(len(set(trainingframes) - set(trackingData.index))) + " frames missing"
+        print str(missingframecount) + " frames missing"
 
         print "Dropping frames with no tracking data"
         trainingframes[:] = [i for i in trainingframes if i in trackingData.index]
@@ -630,7 +631,8 @@ else:
                     str(getAccuracy(decisionTree,
                         externalGT.loc[trainingframes[trainedframescount:],
                             "state"],
-                        trackingData.loc[trainingframes[trainedframescount:]]))
+                        trackingData.loc[trainingframes[trainedframescount:]])) + "," +
+                    str(missingframecount)
                      + "\n")
 
 if args.exporttree is not None:
