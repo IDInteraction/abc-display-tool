@@ -201,7 +201,7 @@ def getAccuracy(inputtree, groundtruth, trackingdata):
 
 def getF1Score(inputtree, groundtruth, trackingdata):
     predicted = inputtree.predict(trackingdata)
-    f1score = metrics.F1_score(groundtruth, predicted)
+    f1score = metrics.f1_score(groundtruth, predicted)
 
     return f1score
 
