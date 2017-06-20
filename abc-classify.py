@@ -195,11 +195,15 @@ def testprob(probs, threshold):
 
 def getAccuracy(inputtree, groundtruth, trackingdata):
     predicted = inputtree.predict(trackingdata)
-
-
     accuracy = metrics.accuracy_score(groundtruth, predicted)
 
     return accuracy
+
+def getF1Score(inputtree, groundtruth, trackingdata):
+    predicted = inputtree.predict(trackingdata)
+    f1score = metrics.F1_score(groundtruth, predicted)
+
+    return f1score
 
 # Callback for when trackbar changes position
 def onChange(trackbarValue):
@@ -632,7 +636,11 @@ else:
                         externalGT.loc[trainingframes[trainedframescount:],
                             "state"],
                         trackingData.loc[trainingframes[trainedframescount:]])) + "," +
-                    str(missingframecount)
+                    str(missingframecount) + "," +
+                    str(getF1Score(decisionTree,
+                        externalGT.loc[trainingframes[trainedframescount:],
+                            "state"],
+                        trackingData.loc[trainingframes[trainedframescount:]]))  
                      + "\n")
 
 if args.exporttree is not None:
