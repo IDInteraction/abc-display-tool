@@ -438,8 +438,8 @@ print trackingData.columns.values
 # and risking classifying the same frame twice etc.
 trainingframes = range(startVideoFrame, endVideoFrame+1)
 
+missingframecount = len(set(trainingframes) - set(trackingData.index))
 if not set(trainingframes).issubset(trackingData.index):
-    missingframecount = len(set(trainingframes) - set(trackingData.index))
     print "Don't have tracking data for each frame"
     if missingframecount > args.maxmissing:
         print "Too many missing frames:"
