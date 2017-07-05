@@ -3,5 +3,3 @@
 import abcclassify
 
 
-print "hello world"
-
