@@ -106,24 +106,17 @@ class videotrackingTests(unittest.TestCase):
 
     def testLoadTrackingData(self):
         testvid = videotracking(framerange=(200,210))
-        testvid.addtrackingdata("./testfiles/P07_front.openface")
-        self.assertEqual(testvid.numTrackingPredictors(), 392)
-        self.assertEqual(testvid.numTrackingFrames(), 10)
-        self.assertEqual(testvid.numTrackingFiles(), 1)
-        self.assertEqual(testvid.gettrackableframes(), range(200,210))
 
+        # Test we can load files
+        # and 
         # Check correct size when loading additional tracking data 
-        testvid.addtrackingdata("./testfiles/P07_front.openface")
-        self.assertEqual(testvid.numTrackingPredictors(), 392 * 2)
-        self.assertEqual(testvid.numTrackingFrames(), 10)
-        self.assertEqual(testvid.numTrackingFiles(), 2)
-        self.assertEqual(testvid.gettrackableframes(), range(200,210))
+        for i in range(1,4):
+            testvid.addtrackingdata("./testfiles/P07_front.openface")
+            self.assertEqual(testvid.numTrackingPredictors(), 392 * i)
+            self.assertEqual(testvid.numTrackingFrames(), 10)
+            self.assertEqual(testvid.numTrackingFiles(), i)
+            self.assertEqual(testvid.gettrackableframes(), range(200,210))
 
-        testvid.addtrackingdata("./testfiles/P07_front.openface")
-        self.assertEqual(testvid.numTrackingPredictors(), 392 * 3)
-        self.assertEqual(testvid.numTrackingFrames(), 10)
-        self.assertEqual(testvid.numTrackingFiles(), 3)
-        self.assertEqual(testvid.gettrackableframes(), range(200,210))
         
         # Check we loose frames when loading missing tracking data
         # No overlap on this one
