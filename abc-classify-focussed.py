@@ -132,10 +132,30 @@ class videotrackingTests(unittest.TestCase):
         self.assertEqual(testvid2.numTrackingFrames(), 19)
         self.assertEqual(testvid2.gettrackableframes(), range(1,20))
 
-        # Test we have tracking data for all the frames left in the videotracking object
-#        self.assertEqual(testvid2.)
+    def testClassifyingFrames(self):
+        testvid = videoclassification(framerange=(1,25))
+        testvid.addclassificationdata("./testfiles/P07firstframes.openface")
 
+        # Check we can provide a classification for a frame, and retrieve it
+        testvid.setclassification(2,1)
+        testvid.setclassification(5,0)
 
+        self.assertEqual(testvid.getclassification(2),1)
+        self.assertEqual(testvid.getclassification(5),0)        
+
+        #Unclassified frames should return None
+        self.assertIsNone(testvid.getclassification(1))
+
+        # We should only be able to classify frames we have classification data for
+        self.assertRaises(ValueError, testvid.setclassification, 100, 0)
+
+        # We should be able to change the classifciation of a frame
+        testvid.setclassification(2,0)
+        self.assertEqual(testvid.getclassification(2),0)
+
+        # We should be able to unclassify a frame (?) - for completeness
+        testvid.setclassification(2,None)
+        self.assertIsNone(testvid.getclassification(2))
 
 if __name__ == "__main__":
     unittest.main()
