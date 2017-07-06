@@ -146,7 +146,7 @@ class videotrackingTests(unittest.TestCase):
         #Unclassified frames should return None
         self.assertIsNone(testvid.getclassification(1))
 
-        # We should only be able to classify frames we have classification data for
+        # We should only be able to classify frames we have tracking data for
         self.assertRaises(ValueError, testvid.setclassification, 100, 0)
 
         # We should be able to change the classifciation of a frame
