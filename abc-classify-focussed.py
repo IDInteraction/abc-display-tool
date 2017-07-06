@@ -37,8 +37,18 @@ class videotracking:
             self.trackingdata = addtrackingdata(trackingdatafile)
 
     def trackrange(self):
+        """ Return the extent of frames we (aim) to generate predictions for"""
         return self.framerange
 
+    def gettrackableframes(self):
+        """" Return frames that we have tracking data for """
+        if self.numtrackingfiles == 0:
+            return None
+        elif len(self.trackingdata.index) == 0:
+            return None
+        else:
+             return list(self.trackingdata.index)
+    
     def addtrackingdata(self, trackingdatafile):
         # TODO Check how many frames we loose - how to allow user to specify threshold?
         thistracking = abcc.loadTrackingData(trackingdatafile)
@@ -59,6 +69,7 @@ class videotracking:
         else:
             self.trackingdata = self.trackingdata.join(thistracking, how="inner", 
              rsuffix="_" + str(self.numtrackingfiles)) 
+        self.trackableframes = list(self.trackingdata.index.values)
 
     def numTrackingPredictors(self):
         return len(self.trackingdata.columns)
@@ -88,15 +99,17 @@ class videotrackingTests(unittest.TestCase):
         testvid = videotracking(videofile="./testfiles/testvid.mp4")
 
         self.assertEqual(testvid.trackrange(), range(1,193))
+        self.assertIsNone(testvid.gettrackableframes())
 
     def testSetRangeWithoutVideo(self):
         testvid = videotracking(framerange=(1,100))
-
         self.assertEqual(testvid.trackrange(), range(1,100))
+        self.assertIsNone(testvid.gettrackableframes())
     
     def testSetRangeWithVideo(self):
         testvid = videotracking(videofile="./testfiles/testvid.mp4", framerange=(20,30))
         self.assertEqual(testvid.trackrange(), range(20,30))
+        self.assertIsNone(testvid.gettrackableframes())
 
     def testLoadTrackingData(self):
         testvid = videotracking(framerange=(200,210))
@@ -104,17 +117,20 @@ class videotrackingTests(unittest.TestCase):
         self.assertEqual(testvid.numTrackingPredictors(), 392)
         self.assertEqual(testvid.numTrackingFrames(), 10)
         self.assertEqual(testvid.numTrackingFiles(), 1)
+        self.assertEqual(testvid.gettrackableframes(), range(200,210))
 
         # Check correct size when loading additional tracking data 
         testvid.addtrackingdata("./testfiles/P07_front.openface")
         self.assertEqual(testvid.numTrackingPredictors(), 392 * 2)
         self.assertEqual(testvid.numTrackingFrames(), 10)
         self.assertEqual(testvid.numTrackingFiles(), 2)
+        self.assertEqual(testvid.gettrackableframes(), range(200,210))
 
         testvid.addtrackingdata("./testfiles/P07_front.openface")
         self.assertEqual(testvid.numTrackingPredictors(), 392 * 3)
         self.assertEqual(testvid.numTrackingFrames(), 10)
         self.assertEqual(testvid.numTrackingFiles(), 3)
+        self.assertEqual(testvid.gettrackableframes(), range(200,210))
         
         # Check we loose frames when loading missing tracking data
         # No overlap on this one
@@ -122,13 +138,16 @@ class videotrackingTests(unittest.TestCase):
         self.assertEqual(testvid.numTrackingPredictors(), 392 * 4)
         self.assertEqual(testvid.numTrackingFrames(), 0)
         self.assertEqual(testvid.numTrackingFiles(), 4)
+        self.assertIsNone(testvid.gettrackableframes())
 
-        # TODO partial overlap
+        # partial overlap
         testvid2 = videotracking(framerange=(1,25))
         testvid2.addtrackingdata("./testfiles/P07firstframes.openface")
         self.assertEqual(testvid2.numTrackingFrames(), 19)
+        self.assertEqual(testvid2.gettrackableframes(), range(1,20))
 
-
+        # Test we have tracking data for all the frames left in the videotracking object
+#        self.assertEqual(testvid2.)
 
 
 
