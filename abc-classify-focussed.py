@@ -80,13 +80,6 @@ class videotracking:
     def numTrackingFiles(self):
         return self.numtrackingfiles
 
-    def brokenfunction(self):
-        raise Exception("Broken")
-
-    def workingfunction(self):
-        return 1
-        
-
 
         
 class videotrackingTests(unittest.TestCase):
