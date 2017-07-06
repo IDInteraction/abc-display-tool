@@ -40,12 +40,19 @@ class videotracking:
         return self.framerange
 
     def addtrackingdata(self, trackingdatafile):
-        # Only keep tracking data for the frame range we're interested in
         # TODO Check how many frames we loose - how to allow user to specify threshold?
         thistracking = abcc.loadTrackingData(trackingdatafile)
         self.numtrackingfiles += 1
 
-        filteredtracking = thistracking.loc[self.framerange]
+        # A KeyError is thrown if we don't have tracking for all the frames in framerange
+        # So we first get the subset of frames that are in the tracking data before filtering down
+        trackingframes = set(thistracking.index).intersection(set(self.framerange))
+
+        if len(trackingframes) > 0:
+            filteredtracking = thistracking.loc[trackingframes]
+        else:
+            print "Warning: no matching frames found in tracking data"
+            filteredtracking = thistracking[0:0]
 
         if self.trackingdata is None:
             self.trackingdata = filteredtracking.copy()
@@ -61,6 +68,13 @@ class videotracking:
     
     def numTrackingFiles(self):
         return self.numtrackingfiles
+
+    def brokenfunction(self):
+        raise Exception("Broken")
+
+    def workingfunction(self):
+        return 1
+        
 
 
         
@@ -100,8 +114,23 @@ class videotrackingTests(unittest.TestCase):
         testvid.addtrackingdata("./testfiles/P07_front.openface")
         self.assertEqual(testvid.numTrackingPredictors(), 392 * 3)
         self.assertEqual(testvid.numTrackingFrames(), 10)
-        print testvid.trackingdata.columns
         self.assertEqual(testvid.numTrackingFiles(), 3)
+        
+        # Check we loose frames when loading missing tracking data
+        # No overlap on this one
+        testvid.addtrackingdata("./testfiles/P07firstframes.openface")
+        self.assertEqual(testvid.numTrackingPredictors(), 392 * 4)
+        self.assertEqual(testvid.numTrackingFrames(), 0)
+        self.assertEqual(testvid.numTrackingFiles(), 4)
+
+        # TODO partial overlap
+        testvid2 = videotracking(framerange=(1,25))
+        testvid2.addtrackingdata("./testfiles/P07firstframes.openface")
+        self.assertEqual(testvid2.numTrackingFrames(), 19)
+
+
+
+
 
 if __name__ == "__main__":
     unittest.main()
