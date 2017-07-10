@@ -3,6 +3,7 @@
 import argparse
 import cv2
 import numpy as np
+import pandas as pd
 import unittest
 
 import abcclassify.abcclassify as abcc
@@ -15,7 +16,8 @@ class videotracking:
     def __init__(self, videofile=None, framerange=None, trackingdatafile = None):
         self.video = None
         self.framerange = None
-        self.trackingdata = None
+        self.trackingdata = None # Contains sources of tracking information (e.g. CppMT, openface data etc.)
+        self.classificationdata = None # Contains the behavioural classifications that have been set by the user
         self.numtrackingfiles = 0
         if videofile is None and framerange is None:
             print("Must supply a framerange if videofile is none")
@@ -32,6 +34,9 @@ class videotracking:
         else:
             lastframe = int(self.video.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
             self.framerange = range(1, lastframe + 1)
+        # We can't store NaNs in integer numpy arrays, so we use -1 for missing    
+        self.classificationdata = pd.Series(data = [-1] * len(self.framerange),
+            index = self.framerange, dtype = np.int64)
 
         if trackingdatafile is not None:
             self.trackingdata = addtrackingdata(trackingdatafile)
@@ -79,8 +84,27 @@ class videotracking:
     
     def numTrackingFiles(self):
         return self.numtrackingfiles
+    
+    def setclassification(self, frame, state):
+        """ Set the behaviour classification for a frame"""
+        if state is None:
+            state = -1
 
+        updateseries = pd.Series(data = [state], index=[frame])
 
+        # Test the frame we're trying to update exists
+        if not set(updateseries.index).issubset(set(self.classificationdata.index)):
+            print "Attempted to update classification for a frame that does not exist"
+            raise ValueError
+
+        self.classificationdata.update(updateseries)
+
+    def getclassification(self, frame):
+        thisclassification =  self.classificationdata[frame]
+        if thisclassification == -1:
+            return None
+        else:
+            return thisclassification
         
 class videotrackingTests(unittest.TestCase):
     
@@ -133,8 +157,8 @@ class videotrackingTests(unittest.TestCase):
         self.assertEqual(testvid2.gettrackableframes(), range(1,20))
 
     def testClassifyingFrames(self):
-        testvid = videoclassification(framerange=(1,25))
-        testvid.addclassificationdata("./testfiles/P07firstframes.openface")
+        testvid = videotracking(framerange=(1,25))
+        testvid.addtrackingdata("./testfiles/P07firstframes.openface")
 
         # Check we can provide a classification for a frame, and retrieve it
         testvid.setclassification(2,1)
@@ -149,11 +173,11 @@ class videotrackingTests(unittest.TestCase):
         # We should only be able to classify frames we have tracking data for
         self.assertRaises(ValueError, testvid.setclassification, 100, 0)
 
-        # We should be able to change the classifciation of a frame
-        testvid.setclassification(2,0)
-        self.assertEqual(testvid.getclassification(2),0)
+        # We should be able to change the classification of a frame
+        testvid.setclassification(2,1)
+        self.assertEqual(testvid.getclassification(2),1)
 
-        # We should be able to unclassify a frame (?) - for completeness
+        # We should be able to unclassify a frame  - for completeness
         testvid.setclassification(2,None)
         self.assertIsNone(testvid.getclassification(2))
 
