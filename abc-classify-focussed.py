@@ -107,8 +107,9 @@ class videotracking:
         else:
             return thisclassification
 
-    # def getnumclassified(self):
-    #     self.classificationdata
+    def getnumclassified(self):
+        numclassified = len(self.classificationdata[self.classificationdata != -1])
+        return numclassified
         
 class videotrackingTests(unittest.TestCase):
     
@@ -168,6 +169,8 @@ class videotrackingTests(unittest.TestCase):
         testvid.setclassification(2,1)
         testvid.setclassification(5,0)
 
+        self.assertEqual(testvid.getnumclassified(),2)
+
         self.assertEqual(testvid.getclassification(2),1)
         self.assertEqual(testvid.getclassification(5),0)        
 
@@ -186,6 +189,8 @@ class videotrackingTests(unittest.TestCase):
         self.assertIsNone(testvid.getclassification(2))
 
         self.assertRaises(ValueError, testvid.setclassification, 100, -1)
+
+        
 
 if __name__ == "__main__":
     unittest.main()
