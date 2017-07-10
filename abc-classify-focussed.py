@@ -86,6 +86,8 @@ class videotracking:
     
     def setclassification(self, frame, state):
         """ Set the behaviour classification for a frame"""
+        if state == -1:
+            raise ValueError("Cannot set behaviour to be -1")
         if state is None:
             state = -1
 
@@ -104,6 +106,9 @@ class videotracking:
             return None
         else:
             return thisclassification
+
+    # def getnumclassified(self):
+    #     self.classificationdata
         
 class videotrackingTests(unittest.TestCase):
     
@@ -179,6 +184,8 @@ class videotrackingTests(unittest.TestCase):
         # We should be able to unclassify a frame  - for completeness
         testvid.setclassification(2,None)
         self.assertIsNone(testvid.getclassification(2))
+
+        self.assertRaises(ValueError, testvid.setclassification, 100, -1)
 
 if __name__ == "__main__":
     unittest.main()
