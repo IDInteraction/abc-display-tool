@@ -9,7 +9,7 @@ import unittest
 import abcclassify.abcclassify as abcc
 
 from sklearn.tree import DecisionTreeClassifier
-
+from sklearn import metrics
 
 class videotracking:
 
@@ -35,6 +35,7 @@ class videotracking:
         else:
             lastframe = int(self.video.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
             self.framerange = range(1, lastframe + 1)
+
         # We can't store NaNs in integer numpy arrays, so we use -1 for missing    
         self.classificationdata = pd.Series(data = [-1] * len(self.framerange),
             index = self.framerange, dtype = np.int64)
@@ -116,23 +117,49 @@ class videotracking:
         tframes = self.trackingdata.loc[self.getClassifiedFrames().index]
         return tframes
 
+    def getTrackingForUnclassifiedFrames(self):
+        untrackinds = set(self.gettrackableframes()) - set( self.getClassifiedFrames().index)
+        return self.classificationdata.loc[untrackinds] 
+
+    def getTrackingForFrames(self, indices):
+        return self.trackingdata.loc[indices]
+
     def numClassifiedFrames(self):
         numclassified = len(self.getClassifiedFrames())
         return numclassified
     
-# class videotrackingClassifier:
-#     """ Fit a (decision tree) classifier to a videotracking object
+class videotrackingclassifier:
+    """ Fit a (decision tree) classifier to a videotracking object
     
-#     This is a wrapper to the sklearn code, which pulls out the appropriate frames to
-#     run the classier on """
+    This is a wrapper to the sklearn code, which pulls out the appropriate frames to
+    run the classier on """
 
-#     def __init__(self, videotrackingObject):
-#         self.classifier = DecisionTreeClassifier()
+    def __init__(self, videoTrackingObject):
+        self.classifier = DecisionTreeClassifier()
+        self.vto = videoTrackingObject
+        self.classifier.fit(self.vto.getTrackingForClassifiedFrames(), self.vto.getClassifiedFrames())
 
-
+    def getPredictions(self, trackingdata):
+        # get the tracking data for the frames we have truth for
+        # Check we have tracking data for all the frames we're trying to predict
+        preds = self.classifier.predict(trackingdata)
+        return preds
         
-#         self.classifier.fit(tracking, classified frames)
+    def getAccuracy(self, truth):
+
+        if not set(truth.index).issubset(set(self.vto.gettrackableframes())):
+            raise ValueError("Trying to predict for frames without tracking data")
         
+        if len(set(truth.index) & set(self.vto.getClassifiedFrames().index)) > 0:
+            raise ValueError("Trying to predict for frames that have already been classified")
+
+        truthtrackingdata = self.vto.getTrackingForFrames(truth.index)
+
+        preds = self.getPredictions(truthtrackingdata)
+
+        accuracy = metrics.accuracy_score(truth, preds)
+
+        return accuracy
 
 
 class videotrackingTests(unittest.TestCase):
@@ -169,7 +196,6 @@ class videotrackingTests(unittest.TestCase):
             self.assertEqual(testvid.numTrackingFrames(), 10)
             self.assertEqual(testvid.numTrackingFiles(), i)
             self.assertEqual(testvid.gettrackableframes(), range(200,210))
-
         
         # Check we loose frames when loading missing tracking data
         # No overlap on this one
@@ -193,11 +219,16 @@ class videotrackingTests(unittest.TestCase):
         testvid.setClassification(2,1)
         testvid.setClassification(5,0)
 
-        # Check we can return classified frames, and their tracking data
+        # Check we can return classified frames, and their classification data
         self.assertEqual(testvid.numClassifiedFrames(),2)
         frames = testvid.getClassifiedFrames()
         self.assertEqual(list(frames.index), [2,5])
         self.assertEqual(list(frames), [1,0])
+
+        # Check we can return unclassified frames
+        uframes = testvid.getTrackingForUnclassifiedFrames()
+        self.assertEqual(set(testvid.gettrackableframes()) - set(frames.index), set(uframes.index))
+        self.assertEqual(set(frames.index) | set(uframes.index), set(testvid.gettrackableframes()))
 
         trackframes = testvid.getTrackingForClassifiedFrames()
         self.assertEqual(list(trackframes.index), [2,5])
@@ -224,13 +255,38 @@ class videotrackingTests(unittest.TestCase):
         self.assertRaises(ValueError, testvid.setClassification, 100, -1)
 
     def testFittingModel(self):
-        pass
         
         # Fit a decision tree classifier to the classified frames
-        # Would we ever want to do this on a subset of the classified frames?
+            
+        testvid = videotracking(videofile="./testfiles/testvid.mp4")
+        testvid.addtrackingdata("./testfiles/P07firstframes.openface")
+
+        for i in range(1,6):
+            testvid.setClassification(i,1)
+        for i in range(6,11):
+            testvid.setClassification(i,0)
+
+        # This builds a dt classifier for all frames we've classified
+        dtclass = videotrackingclassifier(testvid)
+
+        # Get accuracy statistics for fitted model based on external ground truth
+        gtdata = ([1] * 5) + ([0] * 4)
+        groundtruth = pd.Series(data = gtdata, index = range(11,20))
+
+        accuracy = dtclass.getAccuracy(groundtruth)
+
+        # TODO test this is giving correct answer
+
+        # Should fail if we try and calculate accuracy for frames we don't have tracking for
+        excessgroundtruth = pd.Series(data = gtdata + gtdata, index = range(11,29))
+        self.assertRaises(ValueError, dtclass.getAccuracy, excessgroundtruth)
+
+        # Should fail if we try and calculate accuracy using frames we've already classified
+        overlapgt = pd.Series(data = gtdata, index = range(10,19))
+        self.assertRaises(ValueError, dtclass.getAccuracy, overlapgt)
 
 
-        # Get accuracy statistics for fitted model
+
 
         # Get other measures of accuracy (e.g. f1) statistics for fitted model
 
