@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 
+""" Classify behaviour in a video file by focussing on areas of poor predictive performance """
+
 import cv2
 import numpy as np
 import pandas as pd
 import unittest
-
 import abcclassify.abcclassify as abcc
 
-""" Classify behaviour in a video file by focussing on areas of poor predictive performance """
+from sklearn.tree import DecisionTreeClassifier
+
 
 class videotracking:
 
@@ -95,8 +97,7 @@ class videotracking:
 
         # Test the frame we're trying to update exists
         if not set(updateseries.index).issubset(set(self.classificationdata.index)):
-            print "Attempted to update classification for a frame that does not exist"
-            raise ValueError
+            raise ValueError("Attempted to update classification for a frame that does not exist")
 
         self.classificationdata.update(updateseries)
 
@@ -107,10 +108,33 @@ class videotracking:
         else:
             return thisclassification
 
+    def getClassifiedFrames(self):
+        classifiedframes = self.classificationdata.loc[self.classificationdata != -1]
+        return classifiedframes
+
+    def getTrackingForClassifiedFrames(self):
+        tframes = self.trackingdata.loc[self.getClassifiedFrames().index]
+        return tframes
+
     def numClassifiedFrames(self):
-        numclassified = len(self.classificationdata[self.classificationdata != -1])
+        numclassified = len(self.getClassifiedFrames())
         return numclassified
+    
+# class videotrackingClassifier:
+#     """ Fit a (decision tree) classifier to a videotracking object
+    
+#     This is a wrapper to the sklearn code, which pulls out the appropriate frames to
+#     run the classier on """
+
+#     def __init__(self, videotrackingObject):
+#         self.classifier = DecisionTreeClassifier()
+
+
         
+#         self.classifier.fit(tracking, classified frames)
+        
+
+
 class videotrackingTests(unittest.TestCase):
     
     # Unsure how to test exception raised
@@ -169,7 +193,15 @@ class videotrackingTests(unittest.TestCase):
         testvid.setClassification(2,1)
         testvid.setClassification(5,0)
 
+        # Check we can return classified frames, and their tracking data
         self.assertEqual(testvid.numClassifiedFrames(),2)
+        frames = testvid.getClassifiedFrames()
+        self.assertEqual(list(frames.index), [2,5])
+        self.assertEqual(list(frames), [1,0])
+
+        trackframes = testvid.getTrackingForClassifiedFrames()
+        self.assertEqual(list(trackframes.index), [2,5])
+        self.assertEqual(list(trackframes["pose_Tx"]), [64.9382, 63.9397])
 
         self.assertEqual(testvid.getClassification(2),1)
         self.assertEqual(testvid.getClassification(5),0)        
@@ -191,8 +223,43 @@ class videotrackingTests(unittest.TestCase):
         # Should not be able to set a classification that's our internal missing
         self.assertRaises(ValueError, testvid.setClassification, 100, -1)
 
-
+    def testFittingModel(self):
+        pass
         
+        # Fit a decision tree classifier to the classified frames
+        # Would we ever want to do this on a subset of the classified frames?
+
+
+        # Get accuracy statistics for fitted model
+
+        # Get other measures of accuracy (e.g. f1) statistics for fitted model
+
+        # Can only get cross-val accuracy from the object, since it doesn't know about ground truth
+        # but cross val accuracy only makes sense if we've classified frames at random
+        # (cannot test this within the object - it only knows which frames have been classified -
+        # not how they were selected)
+
+        # Should ground truth go in the object? (if it exists)
+        # pros: will allow accuracy calculations for classifier within object
+        # cons: more complexity as we don't always have ground truth
+        # need a loadGroundTruth() method
+
+        # Can have >1 measure of accuracy from a videotracking object (i.e. xval or ground truth, f1 or accuracy 
+        # (or arbitrary metric of model performance))
+        
+
+    def testSplittingObject(self):
+        pass
+
+        # should be able to extract an arbitrary subset of frames from the object and 
+        # return in a new object
+        
+        # Should be able to join arbitrary subsets of frames and return composite object
+
+        # (Should include tracking and classification data for the frames)
+
+
+
 
 if __name__ == "__main__":
     unittest.main()
