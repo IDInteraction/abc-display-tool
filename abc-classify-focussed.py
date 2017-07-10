@@ -84,7 +84,7 @@ class videotracking:
     def numTrackingFiles(self):
         return self.numtrackingfiles
     
-    def setclassification(self, frame, state):
+    def setClassification(self, frame, state):
         """ Set the behaviour classification for a frame"""
         if state == -1:
             raise ValueError("Cannot set behaviour to be -1")
@@ -100,14 +100,14 @@ class videotracking:
 
         self.classificationdata.update(updateseries)
 
-    def getclassification(self, frame):
+    def getClassification(self, frame):
         thisclassification =  self.classificationdata[frame]
         if thisclassification == -1:
             return None
         else:
             return thisclassification
 
-    def getnumclassified(self):
+    def numClassifiedFrames(self):
         numclassified = len(self.classificationdata[self.classificationdata != -1])
         return numclassified
         
@@ -166,29 +166,31 @@ class videotrackingTests(unittest.TestCase):
         testvid.addtrackingdata("./testfiles/P07firstframes.openface")
 
         # Check we can provide a classification for a frame, and retrieve it
-        testvid.setclassification(2,1)
-        testvid.setclassification(5,0)
+        testvid.setClassification(2,1)
+        testvid.setClassification(5,0)
 
-        self.assertEqual(testvid.getnumclassified(),2)
+        self.assertEqual(testvid.numClassifiedFrames(),2)
 
-        self.assertEqual(testvid.getclassification(2),1)
-        self.assertEqual(testvid.getclassification(5),0)        
+        self.assertEqual(testvid.getClassification(2),1)
+        self.assertEqual(testvid.getClassification(5),0)        
 
         #Unclassified frames should return None
-        self.assertIsNone(testvid.getclassification(1))
+        self.assertIsNone(testvid.getClassification(1))
 
         # We should only be able to classify frames we have tracking data for
-        self.assertRaises(ValueError, testvid.setclassification, 100, 0)
+        self.assertRaises(ValueError, testvid.setClassification, 100, 0)
 
         # We should be able to change the classification of a frame
-        testvid.setclassification(2,1)
-        self.assertEqual(testvid.getclassification(2),1)
+        testvid.setClassification(2,1)
+        self.assertEqual(testvid.getClassification(2),1)
 
         # We should be able to unclassify a frame  - for completeness
-        testvid.setclassification(2,None)
-        self.assertIsNone(testvid.getclassification(2))
+        testvid.setClassification(2,None)
+        self.assertIsNone(testvid.getClassification(2))
 
-        self.assertRaises(ValueError, testvid.setclassification, 100, -1)
+        # Should not be able to set a classification that's our internal missing
+        self.assertRaises(ValueError, testvid.setClassification, 100, -1)
+
 
         
 
