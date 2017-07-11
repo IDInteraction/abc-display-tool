@@ -158,6 +158,7 @@ class videotrackingclassifier:
         return metric
 
     def getAccuracy(self, truth):
+        """ Shortcut to get the accuracy """
         accuracy = self.getMetric(truth, metrics.accuracy_score )
         return accuracy
 
@@ -292,9 +293,8 @@ class videotrackingTests(unittest.TestCase):
         # cons: more complexity as we don't always have ground truth
         # need a loadGroundTruth() method
 
-        # Can have >1 measure of accuracy from a videotracking object (i.e. xval or ground truth, f1 or accuracy 
-        # (or arbitrary metric of model performance))
-        
+        # Don't put ground truth with the object
+
 
     def testSplittingObject(self):
         pass
@@ -302,11 +302,12 @@ class videotrackingTests(unittest.TestCase):
         # should be able to extract an arbitrary subset of frames from the object and 
         # return in a new object
         
-        # Should be able to join arbitrary subsets of frames and return composite object
+        # Should be able to join objects containing arbitrary subsets of frames and return composite object
+        # checking we don't have the same frames in both objects
 
-        # (Should include tracking and classification data for the frames)
+        # (This should include tracking and classification data for the frames)
 
-
+        # Check we've copied the object and not just a refrence to it
 
 
 if __name__ == "__main__":
