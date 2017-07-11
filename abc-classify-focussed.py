@@ -340,6 +340,13 @@ class videotrackingTests(unittest.TestCase):
         # (This should include tracking and classification data for the frames)
 
         # Check we've copied the object and not just a reference to it
+        testframe = 7
+        self.assertIsNone(testvid.getClassification(testframe))
+        self.assertIsNone(splitvid.getClassification(testframe))
+        testvid.setClassification(testframe, 2)
+        self.assertEqual(testvid.getClassification(testframe), 2)
+        self.assertIsNone(splitvid.getClassification(testframe))
+
 
 
 if __name__ == "__main__":
