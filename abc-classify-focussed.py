@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import unittest
 import abcclassify.abcclassify as abcc
+import copy
 
 from sklearn.tree import DecisionTreeClassifier
 from sklearn import metrics
@@ -16,10 +17,11 @@ class videotracking:
     """ Class containing video data, tracking and classifications associated with each frame """
     def __init__(self, videofile=None, framerange=None, trackingdatafile = None):
         self.video = None
-        self.framerange = None
+        self.frames = None
         self.trackingdata = None # Contains sources of tracking information (e.g. CppMT, openface data etc.)
         self.classificationdata = None # Contains the behavioural classifications that have been set by the user
         self.numtrackingfiles = 0
+
         if videofile is None and framerange is None:
             print("Must supply a framerange if videofile is none")
             raise ValueError
@@ -31,21 +33,37 @@ class videotracking:
             if len(framerange) != 2:
                 print("Video framerange must by a tuple of length 2")
                 raise ValueError
-            self.framerange = range(framerange[0], framerange[1]) 
+            self.frames = range(framerange[0], framerange[1]) 
         else:
             lastframe = int(self.video.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
-            self.framerange = range(1, lastframe + 1)
+            self.frames = range(1, lastframe + 1)
 
         # We can't store NaNs in integer numpy arrays, so we use -1 for missing    
-        self.classificationdata = pd.Series(data = [-1] * len(self.framerange),
-            index = self.framerange, dtype = np.int64)
+        self.classificationdata = pd.Series(data = [-1] * len(self.frames),
+            index = self.frames, dtype = np.int64)
 
         if trackingdatafile is not None:
             self.trackingdata = addtrackingdata(trackingdatafile)
 
+    def split(self, framerange):
+        """ Return a videotracking object containing a contiguous subset of frames """
+        # TODO subset rather than copy and delete
+        newvt = copy.deepcopy(self)
+        # newvt.video - this will (potentially) contain more frames than we want
+        if len(framerange) != 2:
+            raise ValueError("framerange must be a tuple of length 2")
+        if framerange[0] < min(newvt.frames) or framerange[1] > max(newvt.frames):
+            raise ValueError("can only split on frames that already exist")
+
+        newvt.frames = range(framerange[0], framerange[1])
+        newvt.trackingdata = newvt.trackingdata.loc[newvt.frames]
+        newvt.classificationdata = newvt.classificationdata.loc[newvt.frames]
+
+        return newvt
+
     def trackrange(self):
         """ Return the extent of frames we (aim) to generate predictions for"""
-        return self.framerange
+        return self.frames 
 
     def gettrackableframes(self):
         """" Return frames that we have tracking data for """
@@ -63,7 +81,7 @@ class videotracking:
 
         # A KeyError is thrown if we don't have tracking for all the frames in framerange
         # So we first get the subset of frames that are in the tracking data before filtering down
-        trackingframes = set(thistracking.index).intersection(set(self.framerange))
+        trackingframes = set(thistracking.index).intersection(set(self.frames))
 
         if len(trackingframes) > 0:
             filteredtracking = thistracking.loc[trackingframes]
@@ -295,20 +313,35 @@ class videotrackingTests(unittest.TestCase):
 
         # Don't put ground truth with the object
 
-
     def testSplittingObject(self):
-        pass
+        testvid = videotracking(framerange=(1,25))
+        testvid.addtrackingdata("./testfiles/P07_front.openface")
 
-        # should be able to extract an arbitrary subset of frames from the object and 
+        for i in range(1,6):
+            testvid.setClassification(i,1)
+        for i in range(10,18):
+            testvid.setClassification(i,0)
+
+        # should be able to extract a contiguious subset of frames from the object and 
         # return in a new object
-        
-        # Should be able to join objects containing arbitrary subsets of frames and return composite object
+        splitframes = (5,10) 
+        splitframerange = range(splitframes[0], splitframes[1])
+        splitvid = testvid.split(splitframes)
+
+        self.assertEqual(splitvid.gettrackableframes(), splitframerange)
+        self.assertEqual(list(splitvid.getTrackingForFrames(splitframerange).index), splitframerange )
+
+        # Should fail if we try and subset on frames we don't have 
+        self.assertRaises(ValueError, testvid.split, (10,30))
+
+        # Should be able to join objects containing subsets of frames and return composite object
         # checking we don't have the same frames in both objects
 
         # (This should include tracking and classification data for the frames)
 
-        # Check we've copied the object and not just a refrence to it
+        # Check we've copied the object and not just a reference to it
 
 
 if __name__ == "__main__":
     unittest.main()
+    
