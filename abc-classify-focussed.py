@@ -61,6 +61,47 @@ class videotracking:
 
         return newvt
 
+    def join(self, extravt):
+        """ Join the data in extravt to self, and return this in a new object
+        leaving self untouched """
+
+        # check video is the same in both objects
+        if self.video != extravt.video:
+            raise ValueError("Source video file is different")
+        
+        newvt = copy.deepcopy(self)
+        # check frame ranges don't overlap 
+
+        if len(set(self.frames) & set(extravt.frames)) > 0:
+            raise ValueError("Frames must not overlap")
+
+        # Check same tracking data (same columns) in both parts
+        if newvt.numtrackingfiles != extravt.numtrackingfiles:
+            raise ValueError("Both sources must have the same number of tracking files")
+
+        # do the join
+        newvt.classificationdata = newvt.classificationdata.append(extravt.classificationdata)
+        newvt.trackingdata = newvt.trackingdata.append(extravt.trackingdata)
+        newvt.frames += extravt.frames
+
+        # Sort everything in frame order
+        newvt.classificationdata.sort_index(inplace=True)
+        newvt.trackingdata.sort_index(inplace=True)
+        newvt.frames.sort()
+
+        # Check we have tracking data and (possibly empty) classifications for each frame
+        if list(newvt.classificationdata.index) != list(newvt.trackingdata.index) or \
+            list(newvt.trackingdata.index) != newvt.frames:
+            print "***"
+            print list(newvt.classificationdata.index)
+            print list(newvt.trackingdata.index)
+            print newvt.frames()
+            raise ValueError("Error when joining objects")
+
+        return newvt
+
+
+
     def trackrange(self):
         """ Return the extent of frames we (aim) to generate predictions for"""
         return self.frames 
@@ -313,7 +354,7 @@ class videotrackingTests(unittest.TestCase):
 
         # Don't put ground truth with the object
 
-    def testSplittingObject(self):
+    def testSplittingAndJoiningObject(self):
         testvid = videotracking(framerange=(1,25))
         testvid.addtrackingdata("./testfiles/P07_front.openface")
 
@@ -332,12 +373,27 @@ class videotrackingTests(unittest.TestCase):
         self.assertEqual(list(splitvid.getTrackingForFrames(splitframerange).index), splitframerange )
 
         # Should fail if we try and subset on frames we don't have 
-        self.assertRaises(ValueError, testvid.split, (10,30))
+        self.assertRaises(ValueError, testvid.split, (3,30))
 
-        # Should be able to join objects containing subsets of frames and return composite object
-        # checking we don't have the same frames in both objects
+        splitframes2 = (10, 15)
+        splitvid2 = testvid.split(splitframes2)
 
-        # (This should include tracking and classification data for the frames)
+        joinvid = splitvid.join(splitvid2)
+        # TODO check we've not touched splitvid
+
+        self.assertEqual(joinvid.gettrackableframes(), range(5,15))
+        
+        # Check we can join in either order
+        joinvid2 = splitvid2.join(splitvid)
+        self.assertEqual(joinvid.gettrackableframes(),joinvid2.gettrackableframes())
+
+        splitframes3 = (8, 15)
+        splitvid3 = testvid.split(splitframes3)
+
+        # Exception should be raised if we try and join with an overlap
+        self.assertRaises(ValueError, testvid.join, splitvid3)
+
+        # How do we handle gaps when joining???
 
         # Check we've copied the object and not just a reference to it
         testframe = 7
