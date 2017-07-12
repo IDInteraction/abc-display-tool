@@ -11,6 +11,7 @@ import copy
 
 from sklearn.tree import DecisionTreeClassifier
 from sklearn import metrics
+from sklearn.model_selection import cross_val_score
 
 class videotracking:
 
@@ -229,6 +230,16 @@ class videotrackingclassifier:
         accuracy = self.getMetric(truth, metrics.accuracy_score )
         return accuracy
 
+    def getCrossValidatedScore(self):
+        if self.vto.getClassificationMethod() != "random":
+            raise ValueError("Cross validation is only meaningful when frames have been classified at random")
+        
+        score = cross_val_score(self.classifier, \
+            self.vto.getTrackingForClassifiedFrames(),
+            self.vto.getClassifiedFrames())
+
+        return score
+
 
 class videotrackingTests(unittest.TestCase):
     
@@ -362,12 +373,13 @@ class videotrackingTests(unittest.TestCase):
         # (cannot test this within the object - it only knows which frames have been classified -
         # not how they were selected)
 
-        # Should ground truth go in the object? (if it exists)
-        # pros: will allow accuracy calculations for classifier within object
-        # cons: more complexity as we don't always have ground truth
-        # need a loadGroundTruth() method
+        self.assertRaises(ValueError, dtclass.getCrossValidatedScore)
 
-        # Don't put ground truth with the object
+        # Pretend we've classified at random to test cross val
+        testvid.setClassificationMethod("random")
+        dtrand = videotrackingclassifier(testvid, random_state=123)
+        meanscore = dtrand.getCrossValidatedScore().mean()
+        self.assertEqual(meanscore, 0.25)
 
     def testSplittingAndJoiningObject(self):
         testvid = videotracking(framerange=(1,25))
