@@ -34,6 +34,8 @@ class videotracking(object):
             if len(framerange) != 2:
                 print("Video framerange must by a tuple of length 2")
                 raise ValueError
+            # TODO - test framerange is within video or raise exception
+            # TODO - test first frame >=1
             self.frames = range(framerange[0], framerange[1]) 
         else:
             lastframe = int(self.video.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
@@ -174,13 +176,16 @@ class videotracking(object):
         self.trackableframes = list(self.trackingdata.index.values)
 
     def numTrackingPredictors(self):
-        return len(self.trackingdata.columns)
+        return len(self.getTrackingColumns())
 
     def numTrackingFrames(self):
         return len(self.trackingdata.index)
     
     def numTrackingFiles(self):
         return self.numtrackingfiles
+
+    def getTrackingColumns(self):
+        return list(self.trackingdata.columns)
     
     def setClassification(self, frame, state):
         if self.classficationmethod is None:
