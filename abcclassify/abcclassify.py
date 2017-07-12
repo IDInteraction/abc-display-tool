@@ -17,7 +17,7 @@ class videotracking(object):
     """ Class containing video data, tracking and classifications associated with each frame """
     def __init__(self, videofile=None, framerange=None, trackingdatafile = None):
         self.video = None
-        self.frames = None
+        self.frames = None # The frames we would *like* to classify (may not have tracking data for them)
         self.trackingdata = None # Contains sources of tracking information (e.g. CppMT, openface data etc.)
         self.classificationdata = None # Contains the behavioural classifications that have been set by the user
         self.classficationmethod = None # the method used to classify the frames (used to prevent us doing xvalidation on non-random classifications)
@@ -114,7 +114,13 @@ class videotracking(object):
             return None
         else:
              return list(self.trackingdata.index)
-    
+
+    def getnumtrackableframes(self):
+        return len(self.gettrackableframes())
+
+    def getnumframes(self):
+        return len(self.frames)
+         
 
     def loadTrackingData(self, infile, guessClean=True):
         print "Loading tracking data from: " + infile
