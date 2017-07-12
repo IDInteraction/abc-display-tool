@@ -20,6 +20,7 @@ class videotracking:
         self.frames = None
         self.trackingdata = None # Contains sources of tracking information (e.g. CppMT, openface data etc.)
         self.classificationdata = None # Contains the behavioural classifications that have been set by the user
+        self.classficationmethod = None # the method used to classify the frames (used to prevent us doing xvalidation on non-random classifications)
         self.numtrackingfiles = 0
 
         if videofile is None and framerange is None:
@@ -92,10 +93,6 @@ class videotracking:
         # Check we have tracking data and (possibly empty) classifications for each frame
         if list(newvt.classificationdata.index) != list(newvt.trackingdata.index) or \
             list(newvt.trackingdata.index) != newvt.frames:
-            print "***"
-            print list(newvt.classificationdata.index)
-            print list(newvt.trackingdata.index)
-            print newvt.frames()
             raise ValueError("Error when joining objects")
 
         return newvt
@@ -147,6 +144,8 @@ class videotracking:
         return self.numtrackingfiles
     
     def setClassification(self, frame, state):
+        if self.classficationmethod is None:
+            raise ValueError("Must specify classification method before classifying frames")
         """ Set the behaviour classification for a frame"""
         if state == -1:
             raise ValueError("Cannot set behaviour to be -1")
@@ -160,6 +159,15 @@ class videotracking:
             raise ValueError("Attempted to update classification for a frame that does not exist")
 
         self.classificationdata.update(updateseries)
+
+    def setClassificationMethod(self, method):
+        classificationmethods = ["random", "sequential"] 
+        if not (method in classificationmethods):
+            raise ValueError("Classification method must be one of " + str(classificationmethods))
+        self.classficationmethod = method
+
+    def getClassificationMethod(self):
+        return self.classficationmethod
 
     def getClassification(self, frame):
         thisclassification =  self.classificationdata[frame]
@@ -274,6 +282,12 @@ class videotrackingTests(unittest.TestCase):
     def testClassifyingFrames(self):
         testvid = videotracking(framerange=(1,25))
         testvid.addtrackingdata("./testfiles/P07firstframes.openface")
+        
+        self.assertRaises(ValueError, testvid.setClassificationMethod, "invalid")
+
+        testvid.setClassificationMethod("sequential")
+
+        self.assertEqual(testvid.getClassificationMethod(), "sequential")
 
         # Check we can provide a classification for a frame, and retrieve it
         testvid.setClassification(2,1)
@@ -320,6 +334,7 @@ class videotrackingTests(unittest.TestCase):
             
         testvid = videotracking(videofile="./testfiles/testvid.mp4")
         testvid.addtrackingdata("./testfiles/P07firstframes.openface")
+        testvid.setClassificationMethod("sequential")
 
         for i in range(1,6):
             testvid.setClassification(i,1)
@@ -357,6 +372,7 @@ class videotrackingTests(unittest.TestCase):
     def testSplittingAndJoiningObject(self):
         testvid = videotracking(framerange=(1,25))
         testvid.addtrackingdata("./testfiles/P07_front.openface")
+        testvid.setClassificationMethod("sequential")
 
         for i in range(1,6):
             testvid.setClassification(i,1)
@@ -402,8 +418,6 @@ class videotrackingTests(unittest.TestCase):
         testvid.setClassification(testframe, 2)
         self.assertEqual(testvid.getClassification(testframe), 2)
         self.assertIsNone(splitvid.getClassification(testframe))
-
-
 
 if __name__ == "__main__":
     unittest.main()
