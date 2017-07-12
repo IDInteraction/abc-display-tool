@@ -4,11 +4,9 @@
 import argparse
 import cv2
 import numpy as np
-
 import abcclassify.abcclassify as abcc
 
 parser = argparse.ArgumentParser(description = "Interactively classify behaviours in a video.  For each frame enter a numeric behaviour state.  Press c to classify based on the frames classified so far.  Accuracy is evaluated with cross validation.  Can optionally use an external ground truth file for classification and/or verification.")
-
 parser.add_argument("--videofile",
         dest = "videofile", type = str, required = False,
         help = "The input video file to classify")
