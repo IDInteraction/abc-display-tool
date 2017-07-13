@@ -342,7 +342,6 @@ class videotrackingclassifier(object):
                    "accuracy" : self.getAccuracy(unclassifiedframes),
                    "missingframecount": self.vto.getmissingframes(),
                    "f1score": self.getMetric(unclassifiedframes, metrics.f1_score)
-
                    }
 
         return summary

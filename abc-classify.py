@@ -5,6 +5,8 @@ import argparse
 import cv2
 import numpy as np
 import abcclassify.abcclassify as abcc
+import csv
+import os.path
 
 parser = argparse.ArgumentParser(description = "Interactively classify behaviours in a video.  For each frame enter a numeric behaviour state.  Press c to classify based on the frames classified so far.  Accuracy is evaluated with cross validation.  Can optionally use an external ground truth file for classification and/or verification.")
 parser.add_argument("--videofile",
@@ -95,9 +97,9 @@ if args.forest != 1:
 participant = abcc.videotracking(framerange=(args.startframe, args.endframe))
 
 
-# if args.summaryfile is not None and args.participantcode is None:
-#     print "A participant code must be provided if outputting summary data"
-#     sys.exit()
+if args.summaryfile is not None and args.participantcode is None:
+        print "A participant code must be provided if outputting summary data"
+        sys.exit()
 
 # if (not args.entergt) and args.extgt is None:
 #     print "If not entering ground-truth from video frames, external ground truth must be provided"
@@ -181,46 +183,31 @@ unclassifiedframes = externalGT.loc[trainingframes[args.externaltrainingframes:]
 
 metrics = vtc.getClassificationMetrics(unclassifiedframes)
 
-print metrics
+if args.summaryfile is not None:
+        print "Outputting summary file"
+        metrics["particpantcode"] = args.participantcode
+        fieldorder = ["particpantcode",
+                      "trainedframescount",
+                      "startVideoFrame",
+                      "endVideoFrame",
+                      "xvmean",
+                      "xvsd",
+                      "xvlb",
+                      "xvub",
+                      "accuracy",
+                      "missingframecount",
+                      "f1score"]
+        
+        # Output header if a new file
+        if not os.path.isfile(args.summaryfile):
+                with open(args.summaryfile, "w") as csvfile:
+                        writer = csv.DictWriter(csvfile,  fieldnames = fieldorder)
+                        writer.writeheader()
+
+        with open(args.summaryfile, "a") as csvfile:
+                writer = csv.DictWriter(csvfile,  fieldnames = fieldorder)
+                writer.writerow(metrics)
 quit()
-if args.outfile is not None:
-    if args.includegt:
-        abcc.savePredictions(decisionTree,  trackingData, trainingframes[trainedframescount:],
-                args.outfile,
-                groundtruthframes = trainingframes[:trainedframescount],
-                groundtruth = groundtruth[:trainedframescount])
-    else:
-        savePredictions(decisionTree,  trackingData, trainingframes[trainedframescount:],
-                args.outfile)
-
-
-    if args.summaryfile is not None:
-        print "Outputting summary"
-
-        (xvmean, xvsd, xvlb, xvub) = abcc.getAccuracyCrossVal(decisionTree,
-                        groundtruth[:trainedframescount],
-                        trackingData.loc[trainingframes[:trainedframescount]])
-
-        with(open(args.summaryfile, 'a')) as summaryfile:
-                summaryfile.write(args.participantcode + "," +
-                    str(trainedframescount) + "," +
-                    str(startVideoFrame) + "," +
-                    str(endVideoFrame) + "," +
-                    str(xvmean) + "," +
-                    str(xvsd) + "," + 
-                    str(xvlb) + "," + 
-                    str(xvub) + "," +
-                    str(abcc.getAccuracy(decisionTree,
-                        externalGT.loc[trainingframes[trainedframescount:],
-                            "state"],
-                        trackingData.loc[trainingframes[trainedframescount:]])) + "," +
-                    str(missingframecount) + "," +
-                    str(abcc.getF1Score(decisionTree,
-                        externalGT.loc[trainingframes[trainedframescount:],
-                            "state"],
-                        trackingData.loc[trainingframes[trainedframescount:]]))  
-                    + "\n")
-
 if args.exporttree is not None:
     print "Saving tree"
     if type(decisionTree).__name__ == "DecisionTreeClassifier":
