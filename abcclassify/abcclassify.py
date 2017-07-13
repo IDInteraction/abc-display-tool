@@ -7,10 +7,35 @@ import numpy as np
 import pandas as pd
 import unittest
 import copy
+import csv
 
 from sklearn.tree import DecisionTreeClassifier
 from sklearn import metrics
 from sklearn.model_selection import cross_val_score
+
+def loadExternalGroundTruth(infile, ppt=None, format="checkfile"):
+    
+    if format != "checkfile":
+        print "Only checkfiles implemented"
+#        sys.exit()
+    with open(infile, 'rb') as csvfile:
+        hasheader=csv.Sniffer().has_header(csvfile.read(2048))
+        
+
+    if hasheader:
+        indata = pd.read_csv(infile, index_col=0, header = 0,
+            names = ["frame", "x", "y", "w", "h", "state"])
+    else:
+        indata = pd.read_csv(infile, index_col=0,
+            names = ["frame", "x", "y", "w", "h", "state"])
+    indata.drop(["x","y","w","h"], axis=1 ,inplace = True)
+    
+    if ppt == None:
+        print "Warning - loaded all of external ground truth file"
+    else:
+        indata = indata.loc[ppt.gettrackableframes()]
+
+    return indata
 
 class videotracking(object):
 
@@ -156,7 +181,6 @@ class videotracking(object):
                     print "Using " + indata.index.name + " as frame"
                 print "Using the following columns for classifier:"
                 print indata.columns.values
-                
 
         return indata
 
@@ -227,6 +251,10 @@ class videotracking(object):
         else:
             return thisclassification
 
+    def getClassificationStates(self):
+        """ Return the states that have been used to classify behaviours"""
+        return set(self.getClassifiedFrames())
+
     def getClassifiedFrames(self):
         classifiedframes = self.classificationdata.loc[self.classificationdata != -1]
         return classifiedframes
@@ -259,6 +287,9 @@ class videotrackingclassifier(object):
 
     def getPredictions(self, frames):
         if not set(frames).issubset(set(self.vto.gettrackableframes())):
+            print "***"
+            print len(set(frames))
+            print len(set(self.vto.gettrackableframes()))
             raise ValueError("Trying to predict for frames without tracking data")
 
         if len(set(frames) & set(self.vto.getClassifiedFrames().index)) > 0:
@@ -283,7 +314,6 @@ class videotrackingclassifier(object):
     def getCrossValidatedScore(self):
         if self.vto.getClassificationMethod() != "random":
             raise ValueError("Cross validation is only meaningful when frames have been classified at random")
-        
         score = cross_val_score(self.classifier, \
             self.vto.getTrackingForClassifiedFrames(),
             self.vto.getClassifiedFrames())

@@ -145,11 +145,10 @@ if missingframecount > 0:
     print "Don't have tracking data for each frame"
     print str(missingframecount) + " frames missing"
     if missingframecount > args.maxmissing:
-        print "Too many missing frames"
+        print "Too many missing frames:"
         # Print this as a numpy array to abbreviate if there are lots
         print np.array(list(set(trainingframes) - set(trackingData.index)))
         quit()
-    
 
 if args.shuffle:
     print "Randomising frames"
@@ -162,25 +161,31 @@ else:
     participant.setClassificationMethod("sequential")
 
 print "Loading external ground-truth file"
-externalGT = abcc.loadExternalGroundTruth(args.extgt)
+externalGT = abcc.loadExternalGroundTruth(args.extgt, participant)
 
 if not set(trainingframes).issubset(externalGT.index):
     print "External ground truth not provided for all frames with tracking data"
     print "Missing " + str(len(set(trainingframes) - set(externalGT.index))) + " frames of ground truth"
     quit()
 
-# not sure what this is for
-groundtruth = []
+# Classify the (random or sequential) frames we've decided to classify, using the external ground truth
 
-if args.externaltrainingframes is not None:
-    trainedframescount = args.externaltrainingframes
-else:
-    trainedframescount = int(raw_input("Enter training frames: "))
-groundtruthDF = externalGT.loc[trainingframes[:trainedframescount],"state"]
-groundtruth = list(groundtruthDF)
+for f in trainingframes[:args.externaltrainingframes]:
+    participant.setClassification(f, externalGT.loc[f]["state"])
 
-decisionTree = abcc.runClassifier(groundtruth[:(trainedframescount)],
-            trackingData.loc[trainingframes[:(trainedframescount)]], args.forest)
+print str(participant.numClassifiedFrames()) + " frames classified using ground truth"
+
+vtc = abcc.videotrackingclassifier(participant)  # TODO - RANDOM STATE
+
+#print vtc.getCrossValidatedScore()
+
+print len(set(externalGT.loc[args.externaltrainingframes:].index).intersection(set(participant.gettrackableframes())))
+print len(participant.gettrackableframes())
+print len(set(externalGT.loc[args.externaltrainingframes:].index))
+print args.externaltrainingframes
+print vtc.getAccuracy(externalGT.loc[args.externaltrainingframes:])
+
+quit()
 
 (meanAc, stdAc)  = abcc.getAccuracyCrossVal(decisionTree,
                 groundtruth[:trainedframescount],
