@@ -140,7 +140,7 @@ while len(args.trackerfile) > 0:
 # and risking classifying the same frame twice etc.
 trainingframes = participant.frames # TODO - does this include any missing frames?? It shoudn't
 
-missingframecount = participant.getnumframes() - participant.getnumtrackableframes() 
+missingframecount = participant.getmissingframes()
 if missingframecount > 0:
     print "Don't have tracking data for each frame"
     print str(missingframecount) + " frames missing"
@@ -177,29 +177,12 @@ print str(participant.numClassifiedFrames()) + " frames classified using ground 
 
 vtc = abcc.videotrackingclassifier(participant)  # TODO - RANDOM STATE
 
-print vtc.getCrossValidatedScore()
-
 unclassifiedframes = externalGT.loc[trainingframes[args.externaltrainingframes:]]
-print vtc.getAccuracy(unclassifiedframes)
 
+metrics = vtc.getClassificationMetrics(unclassifiedframes)
+
+print metrics
 quit()
-
-(meanAc, stdAc)  = abcc.getAccuracyCrossVal(decisionTree,
-                groundtruth[:trainedframescount],
-                trackingData.loc[trainingframes[:trainedframescount]])[:2]
-print("Crossval Accuracy: Mean: %0.3f, Std: %0.3f" % (meanAc, stdAc))
-if args.noaccuracyprobs == True:
-    print "Probability accuracy at least:"
-    probs = abcc.getShuffledSuccessProbs(decisionTree,
-    groundtruth[:trainedframescount],
-    trackingData.loc[trainingframes[:trainedframescount]])
-    print probs.mean()
-
-
-    for p in [0.8, 0.9, 0.95, 0.99]:
-        print "probability accuracy > " + str(p) + ": " + str(abcc.testprob(probs, p))
-
-
 if args.outfile is not None:
     if args.includegt:
         abcc.savePredictions(decisionTree,  trackingData, trainingframes[trainedframescount:],
@@ -211,7 +194,6 @@ if args.outfile is not None:
                 args.outfile)
 
 
-# TODO - code repetition with accuracy calc
     if args.summaryfile is not None:
         print "Outputting summary"
 

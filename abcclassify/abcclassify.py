@@ -145,7 +145,10 @@ class videotracking(object):
 
     def getnumframes(self):
         return len(self.frames)
-         
+
+    def getmissingframes(self):
+        """ Get the number of frames we are missing tracking data for """
+        return self.getnumframes() - self.getnumtrackableframes() 
 
     def loadTrackingData(self, infile, guessClean=True):
         print "Loading tracking data from: " + infile
@@ -320,3 +323,26 @@ class videotrackingclassifier(object):
 
         return score
 
+    def getClassificationMetrics(self, unclassifiedframes):
+        """ Return a dict containing metrics and other information about the performance of the classifier.
+        This contains everything, except the participantcode, that we need for the summary file""" 
+
+        if self.vto.getClassificationMethod() == "random":
+            scores = self.getCrossValidatedScore()
+        else:
+            scores = np.array(np.NaN)
+
+        summary = {"trainedframescount" : len(self.vto.getClassifiedFrames()),
+                   "startVideoFrame" : min(self.vto.frames),
+                   "endVideoFrame": max(self.vto.frames),
+                   "xvmean" : scores.mean(),
+                   "xvsd" : scores.std(),
+                   "xvlb" : np.percentile(scores,2.5),
+                   "xvub" : np.percentile(scores,97.5),
+                   "accuracy" : self.getAccuracy(unclassifiedframes),
+                   "missingframecount": self.vto.getmissingframes(),
+                   "f1score": self.getMetric(unclassifiedframes, metrics.f1_score)
+
+                   }
+
+        return summary
