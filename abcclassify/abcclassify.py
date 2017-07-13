@@ -287,13 +287,13 @@ class videotrackingclassifier(object):
 
     def getPredictions(self, frames):
         if not set(frames).issubset(set(self.vto.gettrackableframes())):
-            print "***"
-            print len(set(frames))
-            print len(set(self.vto.gettrackableframes()))
             raise ValueError("Trying to predict for frames without tracking data")
 
-        if len(set(frames) & set(self.vto.getClassifiedFrames().index)) > 0:
-            raise ValueError("Trying to predict for frames that have already been classified")
+        dupframes = set(frames) & set(self.vto.getClassifiedFrames().index)
+        if len(dupframes) > 0:
+            print "****"
+            print len(dupframes)
+            raise ValueError("Trying to predict for frames that have already been classified:" + str(dupframes))
 
         trackingdata = self.vto.getTrackingForFrames(frames)
 

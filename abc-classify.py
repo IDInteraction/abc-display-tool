@@ -138,7 +138,7 @@ while len(args.trackerfile) > 0:
 # We handle the training period by shuffling all the frames in the video
 # We can then work our way through the list as required, to avoid re-drawing the sample
 # and risking classifying the same frame twice etc.
-trainingframes = participant.frames
+trainingframes = participant.frames # TODO - does this include any missing frames?? It shoudn't
 
 missingframecount = participant.getnumframes() - participant.getnumtrackableframes() 
 if missingframecount > 0:
@@ -177,13 +177,10 @@ print str(participant.numClassifiedFrames()) + " frames classified using ground 
 
 vtc = abcc.videotrackingclassifier(participant)  # TODO - RANDOM STATE
 
-#print vtc.getCrossValidatedScore()
+print vtc.getCrossValidatedScore()
 
-print len(set(externalGT.loc[args.externaltrainingframes:].index).intersection(set(participant.gettrackableframes())))
-print len(participant.gettrackableframes())
-print len(set(externalGT.loc[args.externaltrainingframes:].index))
-print args.externaltrainingframes
-print vtc.getAccuracy(externalGT.loc[args.externaltrainingframes:])
+unclassifiedframes = externalGT.loc[trainingframes[args.externaltrainingframes:]]
+print vtc.getAccuracy(unclassifiedframes)
 
 quit()
 
