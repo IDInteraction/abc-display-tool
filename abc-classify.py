@@ -92,25 +92,33 @@ args = parser.parse_args()
 
 
 
-if args.videofile is None and args.extgt is None:
-    print "A video file is required if not usin an external ground truth file"
+if args.extgt is None:
+    print "An external ground truth file is required"
     sys.exit()
 
-if args.summaryfile is not None and args.participantcode is None:
-    print "A participant code must be provided if outputting summary data"
+if args.videofile is not None:
+    print "This version doesn't support manual coding from a video file"
     sys.exit()
 
-if (not args.entergt) and args.extgt is None:
-    print "If not entering ground-truth from video frames, external ground truth must be provided"
-    sys.exit()
+participant = abcc.videotracking(framerange=(args.startframe, args.endframe))
 
 
-if args.summaryfile is not None and args.entergt:
-    print "Must use external ground truth file if outputting summary stats"
-    sys.exit()
+# if args.summaryfile is not None and args.participantcode is None:
+#     print "A participant code must be provided if outputting summary data"
+#     sys.exit()
+
+# if (not args.entergt) and args.extgt is None:
+#     print "If not entering ground-truth from video frames, external ground truth must be provided"
+#     sys.exit()
 
 
+# if args.summaryfile is not None and args.entergt:
+#     print "Must use external ground truth file if outputting summary stats"
+#     sys.exit()
+
+# TODO handle rng seed saving
 if args.rngstate is not None:
+    print "warning rng state not implemented"
     if os.path.isfile(args.rngstate):
         print "Saved random state exits; loading"
         with open(args.rngstate, 'rb') as input:
@@ -125,63 +133,30 @@ if args.rngstate is not None:
             with open(args.rngstate, 'wb') as output:
                 pickle.dump(state, output, pickle.HIGHEST_PROTOCOL)
 
-videoFile = cv2.VideoCapture(args.videofile)
-
-if args.startframe is not None and args.endframe is not None:
-    if args.startframe < 1:
-        print "Startframe must be >=1"
-        sys.exit()
-    if args.endframe < 1:
-        print "Endframe muse be >=1"
-    if args.endframe <= args.startframe:
-        print "Startframe must be before endframe"
-        sys.exit()
 
 
-if args.startframe is not None:
-    startVideoFrame = args.startframe
-else:
-    startVideoFrame = videoFile.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)
+print "Tracking between " + str(min(participant.frames)) + " and " + str(max(participant.frames))
 
-if args.endframe is not None:
-    if args.videofile is not None:
-        lastframe = videoFile.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT)
-        if lastframe < args.endframe:
-            print "Endframe is after the end of the video"
-            sys.exit()
-    endVideoFrame =  args.endframe
-else:
-    endVideoFrame= videoFile.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT)
-
-print "Tracking between " + str(startVideoFrame) + " and " + str(endVideoFrame)
-
-trackingData = abcc.loadTrackingData(args.trackerfile.pop())
 while len(args.trackerfile) > 0:
-    print "Loading additional tracking data"
-    additionalTrackingFile = args.trackerfile.pop()
-    additionalTracking = abcc.loadTrackingData(additionalTrackingFile)
-    trackingData = trackingData.join(additionalTracking, how="inner", rsuffix=abcc.getTableSuffix(additionalTrackingFile)) # Joins on index (i.e. frame)
+    participant.addtrackingdata(args.trackerfile.pop())
 
-print "The following columns are available to the classifier"
-print trackingData.columns.values
+# print "The following columns are available to the classifier"
+# print participant.getTrackingColumns() 
+
 # We handle the training period by shuffling all the frames in the video
 # We can then work our way through the list as required, to avoid re-drawing the sample
 # and risking classifying the same frame twice etc.
-trainingframes = range(startVideoFrame, endVideoFrame+1)
+trainingframes = participant.frames
 
-missingframecount = len(set(trainingframes) - set(trackingData.index))
-if not set(trainingframes).issubset(trackingData.index):
+missingframecount = participant.getnumframes() - participant.getnumtrackableframes() 
+if missingframecount > 0:
     print "Don't have tracking data for each frame"
+    print str(missingframecount) + " frames missing"
     if missingframecount > args.maxmissing:
-        print "Too many missing frames:"
+        print "Too many missing frames"
         # Print this as a numpy array to abbreviate if there are lots
         print np.array(list(set(trainingframes) - set(trackingData.index)))
         quit()
-    else:
-        print str(missingframecount) + " frames missing"
-
-        print "Dropping frames with no tracking data"
-        trainingframes[:] = [i for i in trainingframes if i in trackingData.index]
     
 
 if args.shuffle:
@@ -189,23 +164,20 @@ if args.shuffle:
     # Must use np.random.shuffle for reproducibility, not shuffle since we have *only* set
     # numpy's random seed
     np.random.shuffle(trainingframes)
+    participant.setClassificationMethod("random")
 else:
-    print "Using ordered frames"
+    print "Using sequential frames"
+    participant.setClassificationMethod("sequential")
 
-if args.extgt is not None:
-    print "Loading external ground-truth file"
-    externalGT = abcc.loadExternalGroundTruth(args.extgt)
+print "Loading external ground-truth file"
+externalGT = abcc.loadExternalGroundTruth(args.extgt)
 
+if not set(trainingframes).issubset(externalGT.index):
+    print "External ground truth not provided for all frames with tracking data"
+    print "Missing " + str(len(set(trainingframes) - set(externalGT.index))) + " frames of ground truth"
+    quit()
 
-    if len(trainingframes) > len(externalGT):
-        print "External ground truth file has too few frames for training"
-        quit()
-    if not set(trainingframes).issubset(externalGT.index):
-        print "External ground truth not provided for all frames with tracking data"
-        print list(set(trainingframes) - set(externalGT.index))
-        quit()
-
-
+quit()
 trainedframescount = 0
 
 
