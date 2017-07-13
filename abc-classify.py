@@ -9,7 +9,7 @@ import abcclassify.abcclassify as abcc
 parser = argparse.ArgumentParser(description = "Interactively classify behaviours in a video.  For each frame enter a numeric behaviour state.  Press c to classify based on the frames classified so far.  Accuracy is evaluated with cross validation.  Can optionally use an external ground truth file for classification and/or verification.")
 parser.add_argument("--videofile",
         dest = "videofile", type = str, required = False,
-        help = "The input video file to classify")
+        help = "The input video file to classify. Depreciated.")
 parser.add_argument("--trackerfile",
         dest = "trackerfile", type = str, required = True,
         action="append",
@@ -19,17 +19,15 @@ parser.add_argument("--startframe", type = int, required = False,
 parser.add_argument("--endframe",
         dest = "endframe", type = int, required = False,
         help = "The end frame to run classification on.  Defaults to the end of the video")
-parser.add_argument("--extgt", type = str, required = False,
+parser.add_argument("--extgt", type = str, required = True,
         help = "Whether to use an external ground truth file(s). (currently assumed to have 6 columns; the first containing the video frame number, the sixth containing the state" )
-parser.add_argument("--entergt",
-        dest = "entergt", action="store_true",
-        help = "Whether to interactively enter ground truth data.  For each frame enter a numeric state, c to classify or u to undo the previous frame")
 
 parser.add_argument("--useexternalgt",
         dest = "entergt", action='store_false',
         help = "Whether to use the externally specified ground truth file for classification, instead of classifying interactivel")
-parser.add_argument("--externaltrainingframes", type = int, required = False,
+parser.add_argument("--externaltrainingframes", type = int, required = True,
         help = "The number of frames to use for training and local classification if using an external ground truth file.  Will be prompted for if not specified")
+
 parser.set_defaults(entergt=True)
 
 parser.add_argument("--shuffle", dest="shuffle", action="store_true",
@@ -85,20 +83,14 @@ parser.add_argument("--forest",
         required = False, default = 1,
         help = "Number of trees in the forest")
 
-
-
-
 args = parser.parse_args()
-
-
-
-if args.extgt is None:
-    print "An external ground truth file is required"
-    sys.exit()
 
 if args.videofile is not None:
     print "This version doesn't support manual coding from a video file"
     sys.exit()
+
+if args.forest != 1:
+    print "Random forests not currently supported"
 
 participant = abcc.videotracking(framerange=(args.startframe, args.endframe))
 
@@ -177,140 +169,44 @@ if not set(trainingframes).issubset(externalGT.index):
     print "Missing " + str(len(set(trainingframes) - set(externalGT.index))) + " frames of ground truth"
     quit()
 
-quit()
-trainedframescount = 0
-
-
+# not sure what this is for
 groundtruth = []
-getmulti = False
 
-if args.entergt:
-    cv2.namedWindow("Classification")
-    while trainedframescount < len(trainingframes):
-        thisframe = trainingframes[trainedframescount]
-        if getmulti:
-            img = abcc.getMultiVideoFrame(videoFile, thisframe)
-            getmulti = False
-        else:
-            img = abcc.getVideoFrame(videoFile,thisframe)
-
-        cv2.imshow("Classification", img)
-
-        key =  cv2.waitKey(0)
-        if(chr(key) == 'c'):
-            decisionTree = abcc.runClassifier(groundtruth[:(trainedframescount)],
-                    trackingData.loc[trainingframes[:(trainedframescount)]], args.forest)
-
-            (meanAc, stdAc, nowhere, nowhere)  = abcc.getAccuracyCrossVal(decisionTree,
-                    groundtruth[:trainedframescount],
-                    trackingData.loc[trainingframes[:trainedframescount]])
-            print("Crossval Accuracy: Mean: %0.3f, Std: %0.3f" % (meanAc, stdAc))
-
-            if args.extgt is not None:
-                print "Classification using all remaining external ground truth data:"
-
-                predicted = decisionTree.predict(trackingData.loc[trainingframes[trainedframescount:]])
-                evaluationgroundtruth = externalGT.loc[trainingframes[trainedframescount:]]
-
-                print(metrics.classification_report(evaluationgroundtruth, predicted))
-                print(metrics.confusion_matrix(evaluationgroundtruth, predicted))
-                print(metrics.accuracy_score(evaluationgroundtruth, predicted))
-
-
-            if args.outfile is not None:
-                abcc.savePredictions(decisionTree,  trackingData,
-                        trainingframes[trainedframescount:], args.outfile)
-        elif(chr(key) == 'e'):
-
-            print "Probability accuracy at least:"
-
-            probs = abcc.getShuffledSuccessProbs(decisionTree,
-                    groundtruth[:trainedframescount],
-                    trackingData.loc[trainingframes[:trainedframescount]])
-            print probs.mean()
-
-            for p in [0.8, 0.9, 0.95, 0.99]:
-                print "probability accuracy > " + str(p) + ": " + str(abcc.testprob(probs, p))
-        elif(chr(key) == 'm'):
-            getmulti = True
-        elif(chr(key) == 'q'):
-            if args.outfile is not None:
-                print "Saving predictions"
-                decisionTree = abcc.runClassifier(groundtruth[:(trainedframescount)],
-                    trackingData.loc[trainingframes[:(trainedframescount)]],args.forest)
-                if args.includegt:
-                    abcc.savePredictions(decisionTree,  trackingData, trainingframes[trainedframescount:],
-                            args.outfile,
-                            groundtruthframes = trainingframes[:trainedframescount],
-                            groundtruth = groundtruth[:trainedframescount])
-                else:
-                    abcc.savePredictions(decisionTree,  trackingData, trainingframes[trainedframescount:],
-                            args.outfile)
-            print "Exiting"
-            sys.exit()
-        elif(chr(key) == 'u'):
-            print "Undoing"
-            groundtruth.pop()
-        elif(chr(key) == 'r'):
-            cv2.destroyWindow("Classification")
-            print "Playing predictions, including frames manually classified"
-
-            decisionTree = abcc.runClassifier(groundtruth[:(trainedframescount)],
-                    trackingData.loc[trainingframes[:(trainedframescount)]])
-
-            predictions = abcc.getPredictions(decisionTree, trackingData,
-                    trainingframes[trainedframescount:],
-                    groundtruthframes = trainingframes[:trainedframescount],
-                    groundtruth =  groundtruth)
-            abcc.playbackPredictions(videoFile, predictions, startVideoFrame, endVideoFrame)
-            cv2.namedWindow("Classification")
-        else:
-            try:
-                groundtruth.append(int(chr(key)))
-                if args.extgt is not None:
-                    print "External GT was: " + str(int(externalGT.loc[thisframe]))
-            except ValueError:
-                print "Invalid behaviour state entered; must be numeric"
-        trainedframescount = len(groundtruth)
-        print str(trainedframescount) + " frames classified"
-        print pd.Series(groundtruth).value_counts()
-
+if args.externaltrainingframes is not None:
+    trainedframescount = args.externaltrainingframes
 else:
-    if args.externaltrainingframes is not None:
-        trainedframescount = args.externaltrainingframes
+    trainedframescount = int(raw_input("Enter training frames: "))
+groundtruthDF = externalGT.loc[trainingframes[:trainedframescount],"state"]
+groundtruth = list(groundtruthDF)
+
+decisionTree = abcc.runClassifier(groundtruth[:(trainedframescount)],
+            trackingData.loc[trainingframes[:(trainedframescount)]], args.forest)
+
+(meanAc, stdAc)  = abcc.getAccuracyCrossVal(decisionTree,
+                groundtruth[:trainedframescount],
+                trackingData.loc[trainingframes[:trainedframescount]])[:2]
+print("Crossval Accuracy: Mean: %0.3f, Std: %0.3f" % (meanAc, stdAc))
+if args.noaccuracyprobs == True:
+    print "Probability accuracy at least:"
+    probs = abcc.getShuffledSuccessProbs(decisionTree,
+    groundtruth[:trainedframescount],
+    trackingData.loc[trainingframes[:trainedframescount]])
+    print probs.mean()
+
+
+    for p in [0.8, 0.9, 0.95, 0.99]:
+        print "probability accuracy > " + str(p) + ": " + str(abcc.testprob(probs, p))
+
+
+if args.outfile is not None:
+    if args.includegt:
+        abcc.savePredictions(decisionTree,  trackingData, trainingframes[trainedframescount:],
+                args.outfile,
+                groundtruthframes = trainingframes[:trainedframescount],
+                groundtruth = groundtruth[:trainedframescount])
     else:
-        trainedframescount = int(raw_input("Enter training frames: "))
-    groundtruthDF = externalGT.loc[trainingframes[:trainedframescount],"state"]
-    groundtruth = list(groundtruthDF)
-
-    decisionTree = abcc.runClassifier(groundtruth[:(trainedframescount)],
-                trackingData.loc[trainingframes[:(trainedframescount)]], args.forest)
-
-    (meanAc, stdAc)  = abcc.getAccuracyCrossVal(decisionTree,
-                    groundtruth[:trainedframescount],
-                    trackingData.loc[trainingframes[:trainedframescount]])[:2]
-    print("Crossval Accuracy: Mean: %0.3f, Std: %0.3f" % (meanAc, stdAc))
-    if args.noaccuracyprobs == True:
-        print "Probability accuracy at least:"
-        probs = abcc.getShuffledSuccessProbs(decisionTree,
-        groundtruth[:trainedframescount],
-        trackingData.loc[trainingframes[:trainedframescount]])
-        print probs.mean()
-
-
-        for p in [0.8, 0.9, 0.95, 0.99]:
-            print "probability accuracy > " + str(p) + ": " + str(abcc.testprob(probs, p))
-
-
-    if args.outfile is not None:
-        if args.includegt:
-            abcc.savePredictions(decisionTree,  trackingData, trainingframes[trainedframescount:],
-                    args.outfile,
-                    groundtruthframes = trainingframes[:trainedframescount],
-                    groundtruth = groundtruth[:trainedframescount])
-        else:
-            savePredictions(decisionTree,  trackingData, trainingframes[trainedframescount:],
-                    args.outfile)
+        savePredictions(decisionTree,  trackingData, trainingframes[trainedframescount:],
+                args.outfile)
 
 
 # TODO - code repetition with accuracy calc
