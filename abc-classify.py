@@ -7,6 +7,7 @@ import numpy as np
 import abcclassify.abcclassify as abcc
 import csv
 import os.path
+from sklearn import tree
 
 parser = argparse.ArgumentParser(description = "Interactively classify behaviours in a video.  For each frame enter a numeric behaviour state.  Press c to classify based on the frames classified so far.  Accuracy is evaluated with cross validation.  Can optionally use an external ground truth file for classification and/or verification.")
 parser.add_argument("--videofile",
@@ -207,21 +208,21 @@ if args.summaryfile is not None:
         with open(args.summaryfile, "a") as csvfile:
                 writer = csv.DictWriter(csvfile,  fieldnames = fieldorder)
                 writer.writerow(metrics)
-quit()
+
 if args.exporttree is not None:
     print "Saving tree"
-    if type(decisionTree).__name__ == "DecisionTreeClassifier":
-            tree.export_graphviz(decisionTree, out_file = args.exporttree,
-                feature_names=list(trackingData.columns.values))
+    if type(vtc.classifier).__name__ == "DecisionTreeClassifier":
+            tree.export_graphviz(vtc.classifier, out_file = args.exporttree,
+                feature_names=list(vtc.vto.getTrackingColumns()))
     elif type(decisionTree).__name__ == "RandomForestClassifier":
+        print "Random forests not yet implemented"
+        quit()
         treenum = 0
         for dtree in decisionTree.estimators_:
             tree.export_graphviz(dtree,
                     out_file = str(treenum) + args.exporttree,
                     feature_names=list(trackingData.columns.values))
             treenum += 1
-
-
     else:
         sys.exit("Invalid classifier object")
 

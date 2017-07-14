@@ -315,6 +315,7 @@ class videotrackingclassifier(object):
         return accuracy
 
     def getCrossValidatedScore(self):
+        # TODO allow number of x-validation cuts to be specified
         if self.vto.getClassificationMethod() != "random":
             raise ValueError("Cross validation is only meaningful when frames have been classified at random")
         score = cross_val_score(self.classifier, \
