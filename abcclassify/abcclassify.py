@@ -89,7 +89,8 @@ class videotracking(object):
         if framerange[0] < min(newvt.frames) or framerange[1] > max(newvt.frames):
             raise ValueError("can only split on frames that already exist")
 
-        # TODO handle splitting if we've missing frames in the range
+        # frames contains frames we'd like to classify (even though we may not have tracking data)
+        # so we don't need to worry about missing frames here
         newvt.frames = range(framerange[0], framerange[1])
         newvt.trackingdata = newvt.trackingdata.loc[newvt.frames]
         newvt.classificationdata = newvt.classificationdata.loc[newvt.frames]
@@ -152,7 +153,7 @@ class videotracking(object):
     def getnumframes(self):
         return len(self.frames)
 
-    def getmissingframes(self):
+    def getmissingframecount(self):
         """ Get the number of frames we are missing tracking data for """
         return self.getnumframes() - self.getnumtrackableframes() 
 
@@ -194,7 +195,6 @@ class videotracking(object):
         return indata
 
     def addtrackingdata(self, trackingdatafile):
-        # TODO Check how many frames we loose - how to allow user to specify threshold?
         thistracking = self.loadTrackingData(trackingdatafile)
         self.numtrackingfiles += 1
 
@@ -320,13 +320,13 @@ class videotrackingclassifier(object):
         accuracy = self.getMetric(truth, metrics.accuracy_score )
         return accuracy
 
-    def getCrossValidatedScore(self):
-        # TODO allow number of x-validation cuts to be specified
+    def getCrossValidatedScore(self, cv=None):
+    
         if self.vto.getClassificationMethod() != "random":
             raise ValueError("Cross validation is only meaningful when frames have been classified at random")
         score = cross_val_score(self.classifier, \
             self.vto.getTrackingForClassifiedFrames(),
-            self.vto.getClassifiedFrames())
+            self.vto.getClassifiedFrames(), cv=cv)
 
         return score
 
@@ -347,8 +347,9 @@ class videotrackingclassifier(object):
                    "xvlb" : np.percentile(scores,2.5),
                    "xvub" : np.percentile(scores,97.5),
                    "accuracy" : self.getAccuracy(unclassifiedframes),
-                   "missingframecount": self.vto.getmissingframes(),
-                   "f1score": self.getMetric(unclassifiedframes, metrics.f1_score)
+                   "missingframecount": self.vto.getmissingframecount(),
+                   "f1score": self.getMetric(unclassifiedframes, metrics.f1_score),
+                   "xvcuts" : len(scores)
                    }
 
         return summary

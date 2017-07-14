@@ -143,7 +143,7 @@ while len(args.trackerfile) > 0:
 # and risking classifying the same frame twice etc.
 trainingframes = participant.frames # TODO - does this include any missing frames?? It shoudn't
 
-missingframecount = participant.getmissingframes()
+missingframecount = participant.getmissingframecount()
 if missingframecount > 0:
     print "Don't have tracking data for each frame"
     print str(missingframecount) + " frames missing"
@@ -197,7 +197,8 @@ if args.summaryfile is not None:
                       "xvub",
                       "accuracy",
                       "missingframecount",
-                      "f1score"]
+                      "f1score",
+                      "xvcuts"]
         
         # Output header if a new file
         if not os.path.isfile(args.summaryfile):
