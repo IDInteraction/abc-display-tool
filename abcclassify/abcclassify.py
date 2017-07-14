@@ -334,8 +334,10 @@ class videotrackingclassifier(object):
 
         if self.vto.getClassificationMethod() == "random":
             scores = self.getCrossValidatedScore()
+            xvcuts = len(scores)
         else:
             scores = np.array(np.NaN)
+            xvcuts = np.NaN
 
         summary = {"trainedframes" : len(self.vto.getClassifiedFrames()),
                    "startframe" : min(self.vto.frames),
@@ -347,7 +349,7 @@ class videotrackingclassifier(object):
                    "groundtruthAccuracy" : self.getAccuracy(unclassifiedframes),
                    "missingFrames": self.vto.getmissingframecount(),
                    "f1": self.getMetric(unclassifiedframes, metrics.f1_score),
-                   "crosscalCuts" : len(scores)
+                   "crosscalCuts" : xvcuts 
                    }
 
         return summary
