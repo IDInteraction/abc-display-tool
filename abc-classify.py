@@ -199,7 +199,7 @@ if args.summaryfile is not None:
                     "groundtruthAccuracy" ,
                     "missingFrames",
                     "f1",
-                    "crosscalCuts" ]
+                    "crossvalCuts" ]
         
         # Output header if a new file
         if not os.path.isfile(args.summaryfile):
