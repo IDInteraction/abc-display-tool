@@ -34,6 +34,10 @@ def loadExternalGroundTruth(infile, ppt=None, format="checkfile"):
         print "Warning - loaded all of external ground truth file"
     else:
         indata = indata.loc[ppt.gettrackableframes()]
+    nullframes = sum(indata["state"].isnull())
+    if nullframes > 0:
+        raise ValueError("Missing behaviour states in ground truth file / trying to set groundtruth outwith trackable frame range for " +\
+             str(nullframes) + " frames")
 
     return indata
 
