@@ -25,6 +25,10 @@ class videotrackingTests(unittest.TestCase):
         testvid = abcc.videotracking(videofile="./testfiles/testvid.mp4", framerange=(20,30))
         self.assertEqual(testvid.trackrange(), range(20,30))
         self.assertIsNone(testvid.gettrackableframes())
+    
+    def testRangeWithinVideo(self):
+        self.assertRaises(ValueError, abcc.videotracking, videofile="./testfiles/testvid.mp4", framerange=(0,10))
+        self.assertRaises(ValueError, abcc.videotracking, videofile="./testfiles/testvid.mp4", framerange=(1,1000))
 
     def testLoadTrackingData(self):
         testvid = abcc.videotracking(framerange=(200,210))

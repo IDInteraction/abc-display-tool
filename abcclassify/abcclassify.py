@@ -57,10 +57,16 @@ class videotracking(object):
 
         if framerange is not None:
             if len(framerange) != 2:
-                print("Video framerange must by a tuple of length 2")
-                raise ValueError
-            # TODO - test framerange is within video or raise exception
-            # TODO - test first frame >=1
+                raise ValueError("Video framerange must by a tuple of length 2")
+            
+            if framerange[0] < 1:
+                raise ValueError("First frame must be >= 1")
+
+            if self.video is not None:
+                lastframe = int(self.video.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
+                if framerange[1] > lastframe:
+                    raise ValueError("Frame range must not extend beyond the end of the video")
+
             self.frames = range(framerange[0], framerange[1]) 
         else:
             lastframe = int(self.video.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
