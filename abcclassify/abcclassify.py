@@ -225,7 +225,7 @@ class videotracking(object):
     def getTrackingColumns(self):
         return list(self.trackingdata.columns)
     
-    def setClassification(self, frame, state):
+    def setClassification(self, frame, state, testunset = False):
         if self.classficationmethod is None:
             raise ValueError("Must specify classification method before classifying frames")
         """ Set the behaviour classification for a frame"""
@@ -239,6 +239,9 @@ class videotracking(object):
         # Test the frame we're trying to update exists
         if not set(updateseries.index).issubset(set(self.classificationdata.index)):
             raise ValueError("Attempted to update classification for a frame that does not exist")
+        
+        if testunset and self.classificationdata[frame] != -1:
+            raise ValueError("Attempting to set an already set state, when testunset is True")
 
         self.classificationdata.update(updateseries)
 

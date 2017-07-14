@@ -77,6 +77,8 @@ class videotrackingTests(unittest.TestCase):
         self.assertEqual(list(frames.index), [2,5])
         self.assertEqual(list(frames), [1,0])
 
+        self.assertRaises(ValueError, testvid.setClassification,2,0, testunset = True)
+
         # Check we can return unclassified frames
         uframes = testvid.getTrackingForUnclassifiedFrames()
         self.assertEqual(set(testvid.gettrackableframes()) - set(frames.index), set(uframes.index))
