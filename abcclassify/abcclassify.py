@@ -349,7 +349,7 @@ class videotrackingclassifier(object):
                    "groundtruthAccuracy" : self.getAccuracy(unclassifiedframes),
                    "missingFrames": self.vto.getmissingframecount(),
                    "f1": self.getMetric(unclassifiedframes, metrics.f1_score),
-                   "crosscalCuts" : xvcuts 
+                   "crossvalCuts" : xvcuts 
                    }
 
         return summary
