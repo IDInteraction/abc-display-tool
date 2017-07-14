@@ -132,8 +132,6 @@ class videotracking(object):
 
         return newvt
 
-
-
     def trackrange(self):
         """ Return the extent of frames we (aim) to generate predictions for"""
         return self.frames 
@@ -339,17 +337,17 @@ class videotrackingclassifier(object):
         else:
             scores = np.array(np.NaN)
 
-        summary = {"trainedframescount" : len(self.vto.getClassifiedFrames()),
-                   "startVideoFrame" : min(self.vto.frames),
-                   "endVideoFrame": max(self.vto.frames),
-                   "xvmean" : scores.mean(),
-                   "xvsd" : scores.std(),
-                   "xvlb" : np.percentile(scores,2.5),
-                   "xvub" : np.percentile(scores,97.5),
-                   "accuracy" : self.getAccuracy(unclassifiedframes),
-                   "missingframecount": self.vto.getmissingframecount(),
-                   "f1score": self.getMetric(unclassifiedframes, metrics.f1_score),
-                   "xvcuts" : len(scores)
+        summary = {"trainedframes" : len(self.vto.getClassifiedFrames()),
+                   "startframe" : min(self.vto.frames),
+                   "endframe": max(self.vto.frames),
+                   "crossvalAccuracy" : scores.mean(),
+                   "crossvalAccuracySD" : scores.std(),
+                   "crossvalAccuracyLB" : np.percentile(scores,2.5),
+                   "xcrossvalAccuracyUB" : np.percentile(scores,97.5),
+                   "groundtruthAccuracy" : self.getAccuracy(unclassifiedframes),
+                   "missingFrames": self.vto.getmissingframecount(),
+                   "f1": self.getMetric(unclassifiedframes, metrics.f1_score),
+                   "crosscalCuts" : len(scores)
                    }
 
         return summary

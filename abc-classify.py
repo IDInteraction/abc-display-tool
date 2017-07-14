@@ -186,19 +186,20 @@ metrics = vtc.getClassificationMetrics(unclassifiedframes)
 
 if args.summaryfile is not None:
         print "Outputting summary file"
-        metrics["particpantcode"] = args.participantcode
-        fieldorder = ["particpantcode",
-                      "trainedframescount",
-                      "startVideoFrame",
-                      "endVideoFrame",
-                      "xvmean",
-                      "xvsd",
-                      "xvlb",
-                      "xvub",
-                      "accuracy",
-                      "missingframecount",
-                      "f1score",
-                      "xvcuts"]
+        metrics["configuration"] = args.participantcode
+
+        fieldorder = ["configuration",
+                    "trainedframes" ,
+                    "startframe" ,
+                    "endframe",
+                    "crossvalAccuracy" ,
+                    "crossvalAccuracySD" ,
+                    "crossvalAccuracyLB" ,
+                    "xcrossvalAccuracyUB" ,
+                    "groundtruthAccuracy" ,
+                    "missingFrames",
+                    "f1",
+                    "crosscalCuts" ]
         
         # Output header if a new file
         if not os.path.isfile(args.summaryfile):
