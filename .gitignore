@@ -9,3 +9,4 @@ tags
 *.pyc
 *.swo
 *.dot
+.ipynb_checkpoints/*
