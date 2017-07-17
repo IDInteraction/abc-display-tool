@@ -185,9 +185,8 @@ print str(participant.numClassifiedFrames()) + " frames classified using ground 
 
 vtc = abcc.videotrackingclassifier(participant)  # TODO - RANDOM STATE
 
-unclassifiedframes = externalGT.loc[trainingframes[args.externaltrainingframes:]]
-
-metrics = vtc.getClassificationMetrics(unclassifiedframes)
+unclassifiedframeGT = externalGT.loc[trainingframes[args.externaltrainingframes:]]
+metrics = vtc.getClassificationMetrics(unclassifiedframeGT)
 
 print str(participant.numClassifiedFrames()) + " frames classified"
 
