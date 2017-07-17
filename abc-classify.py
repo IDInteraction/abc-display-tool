@@ -180,8 +180,6 @@ if not set(trainingframes).issubset(externalGT.index):
 for f in trainingframes[:args.externaltrainingframes]:
     participant.setClassification(f, externalGT.loc[f]["state"], testunset = True)
     
-print externalGT["state"].value_counts(dropna = False)
-quit()
 
 print str(participant.numClassifiedFrames()) + " frames classified using ground truth"
 

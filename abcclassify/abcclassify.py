@@ -333,6 +333,7 @@ class videotrackingclassifier(object):
     
         if self.vto.getClassificationMethod() != "random":
             raise ValueError("Cross validation is only meaningful when frames have been classified at random")
+
         score = cross_val_score(self.classifier, \
             self.vto.getTrackingForClassifiedFrames(),
             self.vto.getClassifiedFrames(), cv=cv)
