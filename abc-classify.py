@@ -165,6 +165,9 @@ else:
 
 print "Loading external ground-truth file"
 externalGT = abcc.loadExternalGroundTruth(args.extgt, participant)
+print externalGT["state"].value_counts(dropna = False)
+print str(len(externalGT)) + " frames of ground truth loaded"
+print str(participant.getnumtrackableframes()) + " trackable frames"
 
 if not set(trainingframes).issubset(externalGT.index):
     print "External ground truth not provided for all frames with tracking data"
@@ -174,7 +177,10 @@ if not set(trainingframes).issubset(externalGT.index):
 # Classify the (random or sequential) frames we've decided to classify, using the external ground truth
 
 for f in trainingframes[:args.externaltrainingframes]:
-    participant.setClassification(f, externalGT.loc[f]["state"])
+    participant.setClassification(f, externalGT.loc[f]["state"], testunset = True)
+    
+print externalGT["state"].value_counts(dropna = False)
+quit()
 
 print str(participant.numClassifiedFrames()) + " frames classified using ground truth"
 
@@ -183,6 +189,8 @@ vtc = abcc.videotrackingclassifier(participant)  # TODO - RANDOM STATE
 unclassifiedframes = externalGT.loc[trainingframes[args.externaltrainingframes:]]
 
 metrics = vtc.getClassificationMetrics(unclassifiedframes)
+
+print str(participant.numClassifiedFrames()) + " frames classified"
 
 if args.summaryfile is not None:
         print "Outputting summary file"
