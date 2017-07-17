@@ -297,7 +297,11 @@ class videotrackingclassifier(object):
     def __init__(self, videoTrackingObject, random_state = None):
         self.classifier = DecisionTreeClassifier(random_state = random_state)
         self.vto = videoTrackingObject
-        self.classifier.fit(self.vto.getTrackingForClassifiedFrames(), self.vto.getClassifiedFrames())
+        classifiedframes = self.vto.getClassifiedFrames()
+        if len(classifiedframes) < 1:
+            raise ValueError("Trying to run classifier when no frames have been classified")
+        trackingforclassifiedframes = self.vto.getTrackingForClassifiedFrames()
+        self.classifier.fit(trackingforclassifiedframes, classifiedframes)
 
     def getPredictions(self, frames):
         if not set(frames).issubset(set(self.vto.gettrackableframes())):
