@@ -294,6 +294,14 @@ class videotrackingclassifier(object):
     This is a wrapper to the sklearn code, which pulls out the appropriate frames to
     run the classier on """
 
+    def testindicies(self, frame1, frame2):
+        """ Check the indicies in two dataframes are equal """
+        f1i = list(frame1.index)
+        f2i = list(frame2.index)
+
+        if f1i != f2i:
+            raise ValueError("Indicies do not agree")
+
     def __init__(self, videoTrackingObject, random_state = None):
         self.classifier = DecisionTreeClassifier(random_state = random_state)
         self.vto = videoTrackingObject
@@ -301,6 +309,9 @@ class videotrackingclassifier(object):
         if len(classifiedframes) < 1:
             raise ValueError("Trying to run classifier when no frames have been classified")
         trackingforclassifiedframes = self.vto.getTrackingForClassifiedFrames()
+
+        self.testindicies(trackingforclassifiedframes, classifiedframes) 
+
         self.classifier.fit(trackingforclassifiedframes, classifiedframes)
 
     def getPredictions(self, frames):
@@ -340,11 +351,7 @@ class videotrackingclassifier(object):
         trackingdata = self.vto.getTrackingForClassifiedFrames()
         classificationdata = self.vto.getClassifiedFrames()
 
-        trackindex = list(trackingdata.index)
-        classindex = list(classificationdata.index)
-
-        if trackindex != classindex:
-           raise ValueError("Tracking and classification indicies don't match") 
+        self.testindicies(trackingdata, classificationdata)
 
         score = cross_val_score(self.classifier, \
             trackingdata,
