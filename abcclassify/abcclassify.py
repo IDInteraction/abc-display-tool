@@ -319,13 +319,16 @@ class videotrackingclassifier(object):
         return preds
 
     def getMetric(self, truth, metric):
+        """ Get an accuracy-like metric for data in truth.  Truth contains the ground truth, indexed by frame
+        number for the hframes we want to evaluate """
         preds = self.getPredictions(truth.index)
 
         metric = metric(truth, preds)
         return metric
 
     def getAccuracy(self, truth):
-        """ Shortcut to get the accuracy """
+        """ Shortcut to get the accuracy, truth contains the ground truth we wish to
+        predict for, and evaluate the accuracy against """
         accuracy = self.getMetric(truth, metrics.accuracy_score )
         return accuracy
 
@@ -334,13 +337,22 @@ class videotrackingclassifier(object):
         if self.vto.getClassificationMethod() != "random":
             raise ValueError("Cross validation is only meaningful when frames have been classified at random")
 
+        trackingdata = self.vto.getTrackingForClassifiedFrames()
+        classificationdata = self.vto.getClassifiedFrames()
+
+        trackindex = list(trackingdata.index)
+        classindex = list(classificationdata.index)
+
+        if trackindex != classindex:
+           raise ValueError("Tracking and classification indicies don't match") 
+
         score = cross_val_score(self.classifier, \
-            self.vto.getTrackingForClassifiedFrames(),
-            self.vto.getClassifiedFrames(), cv=cv)
+            trackingdata,
+            classificationdata, cv=cv)
 
         return score
 
-    def getClassificationMetrics(self, unclassifiedframes):
+    def getClassificationMetrics(self, unclassifiedframesGT):
         """ Return a dict containing metrics and other information about the performance of the classifier.
         This contains everything, except the participantcode, that we need for the summary file""" 
 
@@ -358,9 +370,9 @@ class videotrackingclassifier(object):
                    "crossvalAccuracySD" : scores.std(),
                    "crossvalAccuracyLB" : np.percentile(scores,2.5),
                    "xcrossvalAccuracyUB" : np.percentile(scores,97.5),
-                   "groundtruthAccuracy" : self.getAccuracy(unclassifiedframes),
+                   "groundtruthAccuracy" : self.getAccuracy(unclassifiedframesGT),
                    "missingFrames": self.vto.getmissingframecount(),
-                   "f1": self.getMetric(unclassifiedframes, metrics.f1_score),
+                   "f1": self.getMetric(unclassifiedframesGT, metrics.f1_score),
                    "crossvalCuts" : xvcuts 
                    }
 
