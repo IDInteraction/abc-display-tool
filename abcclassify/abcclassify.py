@@ -361,8 +361,6 @@ class videotrackingclassifier(object):
         score = cross_val_score(self.classifier, \
             trackingdata,
             classificationdata, cv=KFold(n_splits=cv, shuffle=True))
-        print "***"
-        print score
 
         return score
 
