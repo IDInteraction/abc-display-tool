@@ -12,6 +12,7 @@ import csv
 from sklearn.tree import DecisionTreeClassifier
 from sklearn import metrics
 from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import KFold
 
 def loadExternalGroundTruth(infile, ppt=None, format="checkfile"):
     
@@ -353,9 +354,15 @@ class videotrackingclassifier(object):
 
         self.testindicies(trackingdata, classificationdata)
 
+        # Set cv to default for cross_val_score
+        if cv is None:
+            cv = 3
+
         score = cross_val_score(self.classifier, \
             trackingdata,
-            classificationdata, cv=cv)
+            classificationdata, cv=KFold(n_splits=cv, shuffle=True))
+        print "***"
+        print score
 
         return score
 
