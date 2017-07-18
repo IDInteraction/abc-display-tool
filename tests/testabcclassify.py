@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import unittest
+import numpy as np
 import pandas as pd
 
 from .context import abcc
@@ -149,6 +150,16 @@ class videotrackingTests(unittest.TestCase):
         dtrand = abcc.videotrackingclassifier(testvid, random_state=123)
         meanscore = dtrand.getCrossValidatedScore(random_state=456).mean()
         self.assertEqual(meanscore, 2.0/3.0)
+
+        # Test setting seed via numpy - this should "chain" automatically
+        np.random.seed(10)
+        dtrand1 = abcc.videotrackingclassifier(testvid)
+        meanscore1 = dtrand1.getCrossValidatedScore(random_state=456).mean()
+
+        np.random.seed(10)
+        dtrand2 = abcc.videotrackingclassifier(testvid)
+        meanscore2 = dtrand1.getCrossValidatedScore(random_state=456).mean()
+        self.assertEqual(meanscore1, meanscore2)
 
     def testSplittingAndJoiningObject(self):
         testvid = abcc.videotracking(framerange=(1,25))
