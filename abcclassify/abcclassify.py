@@ -354,7 +354,7 @@ class videotrackingclassifier(object):
 
         self.testindicies(trackingdata, classificationdata)
 
-        # Set cv to default for cross_val_score
+        # Set cv to default for cross_val_score if unset
         if cv is None:
             cv = 3
 
