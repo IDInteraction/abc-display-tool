@@ -344,7 +344,7 @@ class videotrackingclassifier(object):
         accuracy = self.getMetric(truth, metrics.accuracy_score )
         return accuracy
 
-    def getCrossValidatedScore(self, cv=None):
+    def getCrossValidatedScore(self, cv=None, random_state=None):
     
         if self.vto.getClassificationMethod() != "random":
             raise ValueError("Cross validation is only meaningful when frames have been classified at random")
@@ -360,7 +360,7 @@ class videotrackingclassifier(object):
 
         score = cross_val_score(self.classifier, \
             trackingdata,
-            classificationdata, cv=KFold(n_splits=cv, shuffle=True))
+            classificationdata, cv=KFold(n_splits=cv, shuffle=True, random_state=random_state))
 
         return score
 

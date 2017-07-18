@@ -147,8 +147,8 @@ class videotrackingTests(unittest.TestCase):
         # Pretend we've classified at random to test cross val
         testvid.setClassificationMethod("random")
         dtrand = abcc.videotrackingclassifier(testvid, random_state=123)
-        meanscore = dtrand.getCrossValidatedScore().mean()
-        self.assertEqual(meanscore, 0.25)
+        meanscore = dtrand.getCrossValidatedScore(random_state=456).mean()
+        self.assertEqual(meanscore, 2.0/3.0)
 
     def testSplittingAndJoiningObject(self):
         testvid = abcc.videotracking(framerange=(1,25))
