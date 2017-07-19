@@ -274,6 +274,10 @@ class videotracking(object):
         classifiedframes = self.classificationdata.loc[self.classificationdata != -1]
         return classifiedframes
 
+    def getUnclassifiedFrames(self):
+        unclassifiedframes = self.classificationdata.loc[self.classificationdata == -1]
+        return unclassifiedframes
+    
     def getTrackingForClassifiedFrames(self):
         tframes = self.trackingdata.loc[self.getClassifiedFrames().index]
         return tframes
