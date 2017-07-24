@@ -188,11 +188,15 @@ if not set(trainingframes).issubset(externalGT.index):
 
 if args.targetted is True:
         print "Targetted training"
-        batches = args.externaltrainingframes / args.batchsize
-        if args.externaltrainingframes % args.batchsize != 0:
+        (numbatches, remainder) = divmod(args.externaltrainingframes, args.batchsize)
+        batches = [args.batchsize] * numbatches 
+        if remainder != 0:
                 print "Warning - training frames don't divide equally"
-        abcc.trainRegion(participant, externalGT.loc[trainingframes[:args.batchsize]])
-        for i in range(0,batches):
+                batches.append(remainder)
+        print "training in the following batches (first at random)" 
+        print batches
+        abcc.trainRegion(participant, externalGT.loc[trainingframes[:batches.pop(0)]])
+        for bs in batches:
                 batchresults = abcc.calcWindowedAccuracy(participant, args.windowsize, args.advancesize)
                 minstartframe = batchresults["startframe"].iloc[np.nanargmin(batchresults["mean"])]
                 minendframe = batchresults["endframe"].iloc[np.nanargmin(batchresults["mean"])]
@@ -210,9 +214,10 @@ if args.targetted is True:
                 # Randomise and select the appropriate number of frames for the 
                 # targetted training
                 np.random.shuffle(trainingframes)
-                trainingframes = trainingframes[:args.batchsize]
+                trainingframes = trainingframes[:bs]
                 traindata = externalGT.loc[trainingframes]
                 abcc.trainRegion(participant, traindata)
+
 else:
         for f in trainingframes[:args.externaltrainingframes]:
                 participant.setClassification(f, externalGT.loc[f]["state"], testunset = True)
