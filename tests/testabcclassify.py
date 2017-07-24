@@ -161,6 +161,10 @@ class videotrackingTests(unittest.TestCase):
         meanscore2 = dtrand1.getCrossValidatedScore(random_state=456).mean()
         self.assertEqual(meanscore1, meanscore2)
 
+
+        shufflesplitscore = dtrand1.getShuffleSplitScore(n_splits=50)
+        self.assertEqual(shufflesplitscore.mean(), 0.78)
+
     def testSplittingAndJoiningObject(self):
         testvid = abcc.videotracking(framerange=(1,25))
         testvid.addtrackingdata("./testfiles/P07_front.openface")

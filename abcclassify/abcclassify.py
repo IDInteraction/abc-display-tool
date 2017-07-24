@@ -13,6 +13,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn import metrics
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
+from sklearn.model_selection import ShuffleSplit
 
 def loadExternalGroundTruth(infile, ppt=None, format="checkfile"):
     
@@ -367,6 +368,28 @@ class videotrackingclassifier(object):
             classificationdata, cv=KFold(n_splits=cv, shuffle=True, random_state=random_state))
 
         return score
+    
+    def getShuffleSplitScore(self, n_splits=None, test_size=None, random_state=None):
+        
+        if self.vto.getClassificationMethod() != "random":
+            raise ValueError("Cross validation is only meaningful when frames have been classified at random")
+
+        trackingdata = self.vto.getTrackingForClassifiedFrames()
+        classificationdata = self.vto.getClassifiedFrames()
+
+        self.testindicies(trackingdata, classificationdata)
+
+        # Set parameters to ShuffleSplit default if not set
+        if n_splits is None:
+            n_splits = 3
+        if test_size is None:
+            test_size = 0.25
+        
+        score = cross_val_score(self.classifier, \
+            trackingdata, classificationdata, cv=ShuffleSplit(n_splits = n_splits, random_state = random_state))
+
+        return score
+        
 
     def getClassificationMetrics(self, unclassifiedframesGT):
         """ Return a dict containing metrics and other information about the performance of the classifier.
