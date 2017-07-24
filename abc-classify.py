@@ -142,7 +142,7 @@ while len(args.trackerfile) > 0:
 # We handle the training period by shuffling all the frames in the video
 # We can then work our way through the list as required, to avoid re-drawing the sample
 # and risking classifying the same frame twice etc.
-trainingframes = participant.frames # TODO - does this include any missing frames?? It shoudn't
+trainingframes = participant.gettrackableframes() 
 
 missingframecount = participant.getmissingframecount()
 if missingframecount > 0:
