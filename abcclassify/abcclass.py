@@ -9,11 +9,14 @@ import unittest
 import copy
 import csv
 
+
 from sklearn.tree import DecisionTreeClassifier
 from sklearn import metrics
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
 from sklearn.model_selection import ShuffleSplit
+
+import config
 
 def loadExternalGroundTruth(infile, ppt=None, format="checkfile"):
     

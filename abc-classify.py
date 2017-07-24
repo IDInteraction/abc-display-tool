@@ -4,7 +4,7 @@
 import argparse
 import cv2
 import numpy as np
-import abcclassify.abcclassify as abcc
+import abcclassify as abcc
 import csv
 import os.path
 from sklearn import tree
