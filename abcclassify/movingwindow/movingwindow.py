@@ -47,7 +47,6 @@ def calcWindowedAccuracy(participant, windowsize, advancesize, n_splits = 100):
         numclassframes.append(len(thispart.getClassifiedFrames()))
         numframes.append(len(thispart.frames))
         
-    
     results = pd.DataFrame.from_items([("startframe", windowstarts),
                                        ("endframe", windowends),
                                   ("mean", means),
