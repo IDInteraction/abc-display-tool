@@ -16,7 +16,6 @@ from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
 from sklearn.model_selection import ShuffleSplit
 
-import config
 
 def loadExternalGroundTruth(infile, ppt=None, format="checkfile"):
     

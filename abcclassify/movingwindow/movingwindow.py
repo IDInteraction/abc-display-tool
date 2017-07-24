@@ -67,7 +67,6 @@ def plotaccuracy(p1, p2, windowsize, advancesize):
     rect_main = [left, bottom, width, height]
     rect_cframes = [left, bottom_h, width, 0.2]
 
-
     # start with a rectangular Figure
     plt.figure(1) #, figsize=(8, 8))
 
