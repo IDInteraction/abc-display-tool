@@ -257,7 +257,7 @@ if args.summaryfile is not None:
                 configstring += ("p:" + args.pcode + "::") 
                 configstring += "s:" 
                 if args.targetted:
-                        configstring += "targetted" # TODO include targetted parameters
+                        configstring += ("targetted" + str(args.windowsize) + "x" + str(args.advancesize) + "x" + str(args.batchsize))
                 elif not args.shuffle:
                         configstring += "no"
                 elif args.shuffle:
