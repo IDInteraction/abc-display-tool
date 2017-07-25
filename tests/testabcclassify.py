@@ -119,6 +119,22 @@ class videotrackingTests(unittest.TestCase):
         # Should not be able to set a classification that's our internal missing
         self.assertRaises(ValueError, testvid.setClassification, 100, -1)
 
+    def testGettingTrackableFrames(self):
+
+        testvid = abcc.videotracking(framerange=(200,210))
+        testvid.addtrackingdata("./testfiles/P07_front.openface")
+
+
+        testvid.setClassificationMethod("random")
+        testvid.setClassification(201,1)
+        testvid.setClassification(202,0)
+
+        testvid.trackingdata.drop([203],inplace=True)
+
+        self.assertEqual(list(testvid.getClassifiedFrames().index), [201,202])
+        self.assertEqual(list(testvid.getUnclassifiedFrames().index), [200] + range(203,210))
+        self.assertEqual(list(testvid.getTrackableUnclassifiedFrames().index), [200] + range(204,210))
+
     def testFittingModel(self):
 
         # Fit a decision tree classifier to the classified frames
