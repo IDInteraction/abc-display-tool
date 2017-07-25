@@ -66,9 +66,17 @@ parser.set_defaults(chainrngstate=True)
 parser.add_argument("--summaryfile",
         dest = "summaryfile", type = str, required = False,
         help = "A text file to append summary information from the run to.  Currently records participantCode, trainingframes, startframe, endframe, accuracy (local), accuracy (external)")
+# This needs renaming to --configstring at some point
 parser.add_argument("--participantcode",
         dest = "participantcode", type = str, required = False,
-        help = "The participant code to output in the summaryfile")
+        help = "The configuration string (indicating the options used) to output to the summaryfile")
+parser.add_argument("--part",
+        dest = "part", type = int, required = False,
+        help = "The experiment part. This will be included in the generated config string. Only required if not providing a configuration string.")
+parser.add_argument("--pcode",
+        dest = "pcode", type = str, required = False,
+        help = "The participant code to be included in the config string")
+
 
 parser.add_argument("--noaccuracyprobs",
         dest = "noaccuracyprobs", action="store_true",
@@ -106,11 +114,8 @@ if args.videofile is not None:
 
 if args.forest != 1:
     print "Random forests not currently supported"
+    quit()
 
-participant = abcc.videotracking(framerange=(args.startframe, args.endframe))
-
-if args.summaryfile is not None and args.participantcode is None:
-        parser.error("A participant code must be provided if outputting summary data")
 
 # if (not args.entergt) and args.extgt is None:
 #     print "If not entering ground-truth from video frames, external ground truth must be provided"
@@ -120,6 +125,12 @@ if args.summaryfile is not None and args.participantcode is None:
 # if args.summaryfile is not None and args.entergt:
 #     print "Must use external ground truth file if outputting summary stats"
 #     sys.exit()
+
+if args.summaryfile is not None and args.participantcode is None and (args.part is None or args.pcode is None):
+        parser.error("Must specify [experiment] part and participantcode if outputting a summary file (or provide a manual config string")
+
+
+participant = abcc.videotracking(framerange=(args.startframe, args.endframe))
 
 # TODO handle rng seed saving
 if args.rngstate is not None:
@@ -231,7 +242,25 @@ print str(participant.numClassifiedFrames()) + " frames classified"
 metrics = vtc.getClassificationMetrics(unclassifiedframeGT)
 if args.summaryfile is not None:
         print "Outputting summary file"
-        metrics["configuration"] = args.participantcode
+        if args.participantcode is None:
+                configstring = ""
+                # generate config string
+                configstring += ("a:" + str(args.part) + "::")
+                configstring += ("f:" + str(args.externaltrainingframes) + "::")
+                configstring += ("p:" + args.pcode + "::") 
+                configstring += "s:" 
+                if args.targetted:
+                        configstring += "targetted"
+                elif not args.shuffle:
+                        configstring += "no"
+                elif args.shuffle:
+                        configstring += ""
+                else:
+                        ValueError("Could not determine training mode")
+        else:
+                configstring = args.participantcode
+
+        metrics["configuration"] = configstring 
 
         fieldorder = ["configuration",
                     "trainedframes" ,
