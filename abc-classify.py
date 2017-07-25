@@ -29,6 +29,8 @@ parser.add_argument("--extgt", type = str, required = True,
 parser.add_argument("--useexternalgt",
         dest = "entergt", action='store_false',
         help = "Whether to use the externally specified ground truth file for classification, instead of classifying interactivel")
+parser.add_argument("--includeframefortracking", action="store_true",
+        help = "Include frame number as a tracking variable")
 parser.add_argument("--externaltrainingframes", type = int, required = True,
         help = "The number of frames to use for training and local classification if using an external ground truth file.")
 
@@ -156,6 +158,11 @@ print "Tracking between " + str(min(participant.frames)) + " and " + str(max(par
 while len(args.trackerfile) > 0:
     participant.addtrackingdata(args.trackerfile.pop())
 
+
+if args.includeframefortracking:
+        print "Including frame # as tracking variable"
+        participant.addframeastracking()
+
 # print "The following columns are available to the classifier"
 # print participant.getTrackingColumns() 
 
@@ -250,13 +257,20 @@ if args.summaryfile is not None:
                 configstring += ("p:" + args.pcode + "::") 
                 configstring += "s:" 
                 if args.targetted:
-                        configstring += "targetted"
+                        configstring += "targetted" # TODO include targetted parameters
                 elif not args.shuffle:
                         configstring += "no"
                 elif args.shuffle:
                         configstring += ""
                 else:
                         ValueError("Could not determine training mode")
+                configstring += "::"
+                configstring += "i:"
+                if args.includeframefortracking:
+                        configstring += "incframe"
+                else:
+                        configstring += "excframe"
+                
         else:
                 configstring = args.participantcode
 
