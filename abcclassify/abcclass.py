@@ -221,6 +221,11 @@ class videotracking(object):
              rsuffix="_" + str(self.numtrackingfiles)) 
         self.trackableframes = list(self.trackingdata.index.values)
 
+
+    def addframeastracking(self):
+        """ Include the frame number as a tracking variable """
+        self.trackingdata["frame"] = self.trackingdata.index
+
     def numTrackingPredictors(self):
         return len(self.getTrackingColumns())
 

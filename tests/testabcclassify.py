@@ -58,6 +58,16 @@ class videotrackingTests(unittest.TestCase):
         self.assertEqual(testvid2.numTrackingFrames(), 19)
         self.assertEqual(testvid2.gettrackableframes(), range(1,20))
 
+    def testFramesAsTrackingVar(self):
+        testvid = abcc.videotracking(framerange=(200,210))
+        testvid.addtrackingdata("./testfiles/P07_front.openface")
+
+        oldcols = len(testvid.trackingdata.columns)
+        testvid.addframeastracking()
+        self.assertEqual(oldcols + 1, len(testvid.trackingdata.columns))
+        self.assertEqual(list(testvid.trackingdata.index), list(testvid.trackingdata["frame"]))
+
+
     def testClassifyingFrames(self):
         testvid = abcc.videotracking(framerange=(1,25))
         testvid.addtrackingdata("./testfiles/P07firstframes.openface")
