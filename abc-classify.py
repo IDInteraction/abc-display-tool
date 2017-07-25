@@ -225,10 +225,10 @@ else:
 
 vtc = abcc.videotrackingclassifier(participant)  # TODO - RANDOM STATE
 unclassifiedframeGT = externalGT.loc[participant.getUnclassifiedFrames().index]
-metrics = vtc.getClassificationMetrics(unclassifiedframeGT)
 
 print str(participant.numClassifiedFrames()) + " frames classified"
 
+metrics = vtc.getClassificationMetrics(unclassifiedframeGT)
 if args.summaryfile is not None:
         print "Outputting summary file"
         metrics["configuration"] = args.participantcode
@@ -244,7 +244,12 @@ if args.summaryfile is not None:
                     "groundtruthAccuracy" ,
                     "missingFrames",
                     "f1",
-                    "crossvalCuts" ]
+                    "crossvalCuts",
+                    "shufflesplitscores",
+                    "shufflesplitscoresSD",
+                    "shufflesplitscoresLB",
+                    "shufflesplitscoresUB",
+                    "shufflesplitCuts", ]
         
         # Output header if a new file
         if not os.path.isfile(args.summaryfile):

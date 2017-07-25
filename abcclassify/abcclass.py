@@ -405,9 +405,13 @@ class videotrackingclassifier(object):
         if self.vto.getClassificationMethod() == "random":
             scores = self.getCrossValidatedScore()
             xvcuts = len(scores)
+            shufflesplitscores = self.getShuffleSplitScore(n_splits=100)
+            sscuts = len(shufflesplitscores)
         else:
             scores = np.array(np.NaN)
             xvcuts = np.NaN
+            shufflesplitscores = np.array(np.NaN)
+            sscuts = np.NaN
 
         summary = {"trainedframes" : len(self.vto.getClassifiedFrames()),
                    "startframe" : min(self.vto.frames),
@@ -419,7 +423,12 @@ class videotrackingclassifier(object):
                    "groundtruthAccuracy" : self.getAccuracy(unclassifiedframesGT),
                    "missingFrames": self.vto.getmissingframecount(),
                    "f1": self.getMetric(unclassifiedframesGT, metrics.f1_score),
-                   "crossvalCuts" : xvcuts 
+                   "crossvalCuts" : xvcuts,
+                   "shufflesplitscores" : shufflesplitscores.mean(),
+                   "shufflesplitscoresSD": shufflesplitscores.std(),
+                   "shufflesplitscoresLB": np.percentile(shufflesplitscores, 2.5),
+                   "shufflesplitscoresUB": np.percentile(shufflesplitscores, 97.5),
+                   "shufflesplitCuts" : sscuts,
                    }
 
         return summary
