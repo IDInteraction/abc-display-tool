@@ -242,7 +242,7 @@ else:
         print str(participant.numClassifiedFrames()) + " frames classified using ground truth"
 
 vtc = abcc.videotrackingclassifier(participant)  # TODO - RANDOM STATE
-unclassifiedframeGT = externalGT.loc[participant.getUnclassifiedFrames().index]
+unclassifiedframeGT = externalGT.loc[participant.getTrackableUnclassifiedFrames().index]
 
 print str(participant.numClassifiedFrames()) + " frames classified"
 
