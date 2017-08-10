@@ -13,9 +13,9 @@ import sys
 parser = argparse.ArgumentParser(description = "Classify behaviours in a video.")
 parser.add_argument("--videofile",
         dest = "videofile", type = str, required = False,
-        help = "The input video file to classify. Depreciated.")
+        help = "The input video file to classify.")
 parser.add_argument("--trackerfile",
-        dest = "trackerfile", type = str, required = True,
+        dest = "trackerfile", type = str, required = False,
         action="append",
         help = "The data from some object tracking software.  OpenFace and CppMT data will be handled appropriately.  Other data types will take the 1st colum as the frame number, and assume all other columns are required.")
 parser.add_argument("--startframe", type = int, required = False,
@@ -23,8 +23,8 @@ parser.add_argument("--startframe", type = int, required = False,
 parser.add_argument("--endframe",
         dest = "endframe", type = int, required = False,
         help = "The end frame to run classification on.  Defaults to the end of the video")
-parser.add_argument("--extgt", type = str, required = True,
-        help = "Whether to use an external ground truth file(s). (currently assumed to have 6 columns; the first containing the video frame number, the sixth containing the state" )
+parser.add_argument("--extgt", type = str, required = False,
+        help = "The name of an (optional) external ground truth file. (currently assumed to have 6 columns; the first containing the video frame number, the sixth containing the state" )
 
 parser.add_argument("--useexternalgt",
         dest = "entergt", action='store_false',
@@ -111,12 +111,11 @@ if args.targetted and (args.windowsize is None or args.advancesize is None or ar
 if args.targetted and args.shuffle is False:
         parser.error("Must use --shuffle if doing targetted training")
 
-if args.videofile is not None:
-    parser.error("This version doesn't support manual coding from a video file")
+if args.videofile is None and args.extgt is None:
+    parser.error("Must provide an external ground truth file if not providing a video")
 
 if args.forest != 1:
-    print "Random forests not currently supported"
-    quit()
+    parser.error("Random forests not currently supported")
 
 
 # if (not args.entergt) and args.extgt is None:
@@ -191,15 +190,16 @@ else:
     print "Using sequential frames"
     participant.setClassificationMethod("sequential")
 
-print "Loading external ground-truth file"
-externalGT = abcc.loadExternalGroundTruth(args.extgt, participant)
-print externalGT["state"].value_counts(dropna = False)
-print str(len(externalGT)) + " frames of ground truth loaded"
+if args.extgt is not None:
+        print "Loading external ground-truth file"
+        groundtruth = abcc.externalgroundtruth(args.extgt, participant)
+print groundtruth.getstatecounts()
+print str(len(groundtruth)) + " frames of ground truth loaded"
 print str(participant.getnumtrackableframes()) + " trackable frames"
 
-if not set(trainingframes).issubset(externalGT.index):
+if not set(trainingframes).issubset(groundtruth.getframeswithtruth()):
     print "External ground truth not provided for all frames with tracking data"
-    print "Missing " + str(len(set(trainingframes) - set(externalGT.index))) + " frames of ground truth"
+    print "Missing " + str(len(set(trainingframes) - groundtruth.getframeswithtruth())) + " frames of ground truth"
     quit()
 
 # Classify the (random or sequential) frames we've decided to classify, using the external ground truth
@@ -213,7 +213,7 @@ if args.targetted is True:
                 batches.append(remainder)
         print "training in the following batches (first at random)" 
         print batches
-        abcc.trainRegion(participant, externalGT.loc[trainingframes[:batches.pop(0)]])
+        abcc.trainRegion(participant, groundtruth.loc[trainingframes[:batches.pop(0)]])
         for bs in batches:
                 batchresults = abcc.calcWindowedAccuracy(participant, args.windowsize, args.advancesize)
                 minstartframe = batchresults["startframe"].iloc[np.nanargmin(batchresults["mean"])]
@@ -233,20 +233,21 @@ if args.targetted is True:
                 # targetted training
                 np.random.shuffle(trainingframes)
                 trainingframes = trainingframes[:bs]
-                traindata = externalGT.loc[trainingframes]
+                traindata = groundtruth.loc[trainingframes]
                 abcc.trainRegion(participant, traindata)
 
 else:
         for f in trainingframes[:args.externaltrainingframes]:
-                participant.setClassification(f, externalGT.loc[f]["state"], testunset = True)
+                participant.setClassification(f, groundtruth.getgroundtruth(f), testunset = True)
         print str(participant.numClassifiedFrames()) + " frames classified using ground truth"
 
 vtc = abcc.videotrackingclassifier(participant)  # TODO - RANDOM STATE
-unclassifiedframeGT = externalGT.loc[participant.getTrackableUnclassifiedFrames().index]
+unclassifiedframeGT = groundtruth.loc[participant.getTrackableUnclassifiedFrames().index]
 
 print str(participant.numClassifiedFrames()) + " frames classified"
 
 metrics = vtc.getClassificationMetrics(unclassifiedframeGT)
+print metrics
 if args.summaryfile is not None:
         print "Outputting summary file"
         if args.participantcode is None:
