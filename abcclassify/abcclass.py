@@ -62,12 +62,28 @@ class groundtruthsource(object):
     @abstractmethod
     def getgroundtruth(self, frame):
         """ Get the groundtruth for a frame (or frames??)"""
+        pass
 
+    @abstractmethod
+    def __len__(self):
+        """Return the number of currently classified frames with ground truth"""
+        pass
+
+    @abstractmethod
+    def classifiableframes(self):
+        """ Return the number of frames it is possible to classify """
+        pass
+
+    @abstractmethod
+    def getframeswithtruth(self):
+        """ Return the set of frame numbers that have ground truth"""
+        
 
 class externalgroundtruth(groundtruthsource):
     """ Ground truth as defined in an external file """
     def __init__(self, source = None, participant = None):
         self.groundtruth = loadExternalGroundTruth(infile = source, ppt = participant)
+        self.loc  = self.groundtruth.loc
 
     def getgroundtruth(self, frame, failmissing = True):
         if frame not in self.groundtruth.index:
@@ -79,6 +95,19 @@ class externalgroundtruth(groundtruthsource):
 
         gt = self.groundtruth.loc[frame]["state"]
         return gt
+
+    def getstatecounts(self):
+        return self.groundtruth["state"].value_counts(dropna = False)
+
+    def __len__(self):
+        return len(self.groundtruth)
+
+    def classifiableframes(self):
+        """ All frames are classified on load for external ground truth"""
+        return self.__len__(self)
+
+    def getframeswithtruth(self):
+        return set(self.groundtruth.index)
 
 groundtruthsource.register(externalgroundtruth)
 
