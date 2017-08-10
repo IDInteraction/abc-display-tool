@@ -112,7 +112,13 @@ if args.targetted and args.shuffle is False:
         parser.error("Must use --shuffle if doing targetted training")
 
 if args.videofile is None and args.extgt is None:
-    parser.error("Must provide an external ground truth file if not providing a video")
+        parser.error("Must provide an external ground truth file if not providing a video")
+
+if args.videofile is not None and args.extgt is not None:
+        # TODO implement flag to pass external ground truth as a cross check?
+        # Is it of interest how well per frame and from video classification agree? 
+        # agree?
+        parser.error("Cannot provide video _and_ external ground truth")
 
 if args.forest != 1:
     parser.error("Random forests not currently supported")
@@ -193,6 +199,11 @@ else:
 if args.extgt is not None:
         print "Loading external ground-truth file"
         groundtruth = abcc.externalgroundtruth(args.extgt, participant)
+
+if args.videofile is not None:
+        print "Using video to determine ground truth"
+        groundtruth = abcc.videogroundtruth(args.videofile, participant)
+
 print groundtruth.getstatecounts()
 print str(len(groundtruth)) + " frames of ground truth loaded"
 print str(participant.getnumtrackableframes()) + " trackable frames"
