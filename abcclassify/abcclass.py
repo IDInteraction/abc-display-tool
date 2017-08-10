@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-""" Classify behaviour in a video file by focussing on areas of poor predictive performance """
 
 import cv2
 import numpy as np

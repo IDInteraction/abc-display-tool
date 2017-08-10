@@ -10,7 +10,7 @@ import os.path
 from sklearn import tree
 import sys
 
-parser = argparse.ArgumentParser(description = "Interactively classify behaviours in a video.  For each frame enter a numeric behaviour state.  Press c to classify based on the frames classified so far.  Accuracy is evaluated with cross validation.  Can optionally use an external ground truth file for classification and/or verification.")
+parser = argparse.ArgumentParser(description = "Classify behaviours in a video.  For each frame enter a numeric behaviour state.  Press c to classify based on the frames classified so far.  Accuracy is evaluated with cross validation.  Can optionally use an external ground truth file for classification and/or verification.")
 parser.add_argument("--videofile",
         dest = "videofile", type = str, required = False,
         help = "The input video file to classify. Depreciated.")
