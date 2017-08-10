@@ -15,12 +15,19 @@ from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
 from sklearn.model_selection import ShuffleSplit
 
+from abc import ABCMeta, abstractmethod
 
 def loadExternalGroundTruth(infile, ppt=None, format="checkfile"):
-    
+    import os
+
     if format != "checkfile":
         print "Only checkfiles implemented"
-#        sys.exit()
+        sys.exit()
+    
+    if not os.path.exists(infile):
+        raise ValueError("Cannot find file %s" % infile)
+        
+    
     with open(infile, 'rb') as csvfile:
         hasheader=csv.Sniffer().has_header(csvfile.read(2048))
         
@@ -43,6 +50,41 @@ def loadExternalGroundTruth(infile, ppt=None, format="checkfile"):
              str(nullframes) + " frames")
 
     return indata
+
+class groundtruthsource(object):
+    __metaclass__ = ABCMeta
+    """ A abstract class implementing the source of ground truth; could be from an external file
+    or from interactive classification of frames """
+    @abstractmethod
+    def __init__(self, source=None, participant=None):
+        pass
+
+    @abstractmethod
+    def getgroundtruth(self, frame):
+        """ Get the groundtruth for a frame (or frames??)"""
+
+
+class externalgroundtruth(groundtruthsource):
+    """ Ground truth as defined in an external file """
+    def __init__(self, source = None, participant = None):
+        self.groundtruth = loadExternalGroundTruth(infile = source, ppt = participant)
+
+    def getgroundtruth(self, frame, failmissing = True):
+        if frame not in self.groundtruth.index:
+            print "frame not found"
+            if failmissing == True:
+                raise ValueError("Cannot find frame %d in groundtruth" % frame)
+            else:
+                return None
+
+        gt = self.groundtruth.loc[frame]["state"]
+        return gt
+
+groundtruthsource.register(externalgroundtruth)
+
+# class videogroundtruth(groundtruthsource):
+#     """ Ground truth as given by the user by interactively classifying a video """
+       
 
 class videotracking(object):
 

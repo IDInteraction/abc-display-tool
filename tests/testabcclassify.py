@@ -191,6 +191,19 @@ class videotrackingTests(unittest.TestCase):
         shufflesplitscore = dtrand1.getShuffleSplitScore(n_splits=50)
         self.assertEqual(shufflesplitscore.mean(), 0.78)
 
+    def testGettingGroundTruth(self):
+        testvid = abcc.videotracking(framerange=(4080,4090))
+        testvid.setClassificationMethod("sequential")
+
+        self.assertRaises(ValueError, \
+            abcc.externalgroundtruth, "./testfiles/P07_attention", testvid)
+        
+        testgt = abcc.externalgroundtruth("./testfiles/P07_attention.csv")
+
+        self.assertEqual(testgt.getgroundtruth(4080), 0 )
+        self.assertRaises(ValueError, testgt.getgroundtruth, 1)
+        self.assertIsNone(testgt.getgroundtruth(1, failmissing = False))
+
     def testSplittingAndJoiningObject(self):
         testvid = abcc.videotracking(framerange=(1,25))
         testvid.addtrackingdata("./testfiles/P07_front.openface")
