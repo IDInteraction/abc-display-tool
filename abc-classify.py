@@ -255,7 +255,12 @@ else:
         print str(participant.numClassifiedFrames()) + " frames classified using ground truth"
 
 vtc = abcc.videotrackingclassifier(participant)  # TODO - RANDOM STATE
-unclassifiedframeGT = groundtruth.loc[participant.getTrackableUnclassifiedFrames().index]
+# If we're classifying from video we can't get groundtruth for unclassified frames,
+# since all the frames with groundtruth are used for classification
+try:
+        unclassifiedframeGT = groundtruth.loc[participant.getTrackableUnclassifiedFrames().index]
+except KeyError:
+        unclassifiedframeGT = None
 
 print str(participant.numClassifiedFrames()) + " frames classified"
 

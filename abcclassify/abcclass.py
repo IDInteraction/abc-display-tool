@@ -559,6 +559,13 @@ class videotrackingclassifier(object):
             shufflesplitscores = np.array(np.NaN)
             sscuts = np.NaN
 
+        if unclassifiedframesGT is None: # Haven't got ground truth for unclassified frames
+            groundtruthaccuracy = np.NaN
+            f1 = np.NaN
+        else:
+            groundtruthaccuracy =  self.getAccuracy(unclassifiedframesGT)
+            f1 = self.getMetric(unclassifiedframesGT, metrics.f1_score)
+
         summary = {"trainedframes" : len(self.vto.getClassifiedFrames()),
                    "startframe" : min(self.vto.frames),
                    "endframe": max(self.vto.frames),
@@ -566,9 +573,9 @@ class videotrackingclassifier(object):
                    "crossvalAccuracySD" : scores.std(),
                    "crossvalAccuracyLB" : np.percentile(scores,2.5),
                    "xcrossvalAccuracyUB" : np.percentile(scores,97.5),
-                   "groundtruthAccuracy" : self.getAccuracy(unclassifiedframesGT),
+                   "groundtruthAccuracy" : groundtruthaccuracy,
                    "missingFrames": self.vto.getmissingframecount(),
-                   "f1": self.getMetric(unclassifiedframesGT, metrics.f1_score),
+                   "f1": f1,
                    "crossvalCuts" : xvcuts,
                    "shufflesplitscores" : shufflesplitscores.mean(),
                    "shufflesplitscoresSD": shufflesplitscores.std(),
