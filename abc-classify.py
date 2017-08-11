@@ -211,7 +211,9 @@ print str(participant.getnumtrackableframes()) + " trackable frames"
 if not set(trainingframes).issubset(groundtruth.getframeswithtruth()):
     print "External ground truth not provided for all frames with tracking data"
     print "Missing " + str(len(set(trainingframes) - groundtruth.getframeswithtruth())) + " frames of ground truth"
-    quit()
+    if type(groundtruth).__name__ == "externalgroundtruth":
+        print("Quitting")
+        quit()
 
 # Classify the (random or sequential) frames we've decided to classify, using the external ground truth
 

@@ -78,6 +78,78 @@ class groundtruthsource(object):
     def getframeswithtruth(self):
         """ Return the set of frame numbers that have ground truth"""
         
+class videogroundtruth(groundtruthsource):
+    """ Ground truth as given by the user by interactively classifying a video """
+    def __init__(self, source, participant=None):
+        self.video = cv2.VideoCapture(source)
+        self.groundtruth = pd.DataFrame(columns = ["frame","state"])
+        self.groundtruth.set_index("frame", inplace = True)
+
+        self.loc = self.groundtruth.loc
+        
+        self.windowname = "Classification"
+
+    def __len__(self):
+        return len(self.groundtruth)
+
+    def getframeswithtruth(self):
+        return set(self.groundtruth.index)
+
+    # TODO repetition - put in grountruthsource
+    def getstatecounts(self):
+        return self.groundtruth["state"].value_counts(dropna = False)
+
+    def getVideoFrame(self, frame, directFrame = True):
+        # Return the video frame from the video
+        # Pass in a  video frame number
+        # This link implies setting frame directly can be problematic, but seems
+        # OK on our videos
+        # http://stackoverflow.com/questions/11469281/getting-individual-frames-using-cv-cap-prop-pos-frames-in-cvsetcaptureproperty
+
+        if not directFrame: #set by time
+            fps = self.video.get(cv2.cv.CV_CAP_PROP_FPS)
+            frameTime = 1000 * (frame-1) / fps
+            self.video.set(cv2.cv.CV_CAP_PROP_POS_MSEC, frameTime)
+        else: # pull out the frame by number
+            self.video.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, frame)
+
+        ret, img = self.video.read()
+        if ret == False:
+            print "Failed to capture frame " + str(frame)
+            sys.exit()
+
+        return img
+
+    def getgroundtruth(self, frame):
+        """ Get the ground truth for a frame; getting the user to define it if it hasn't already been
+        defined """
+
+        if frame not in self.groundtruth.index:
+            # Show the frame and get the user to classify it
+            cv2.namedWindow(self.windowname)
+
+            img = videogroundtruth.getVideoFrame(self, frame)
+            cv2.imshow(self.windowname, img)
+            framechar = 'x'
+            while framechar not in ['0','1']:
+                key = cv2.waitKey(0) & 255 # Mask - see https://codeyarns.com/2015/01/20/how-to-use-opencv-waitkey-in-python/
+                framechar = chr(key)
+
+            framestate = int(chr(key)) # TODO test numeric
+            self.groundtruth.loc[frame] = framestate
+
+
+        if frame not in self.groundtruth.index:
+            raise ValueError("Could not get state for frame %d" % frame)
+
+        gt = self.groundtruth.loc[frame]["state"]
+        return gt       
+
+    def classifiableframes(self):
+        """ Number of classifiable frames - this will be every frame in the video """
+        endframe = self.video.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT)
+        return endframe
+
 
 class externalgroundtruth(groundtruthsource):
     """ Ground truth as defined in an external file """
@@ -111,9 +183,6 @@ class externalgroundtruth(groundtruthsource):
 
 groundtruthsource.register(externalgroundtruth)
 
-# class videogroundtruth(groundtruthsource):
-#     """ Ground truth as given by the user by interactively classifying a video """
-       
 
 class videotracking(object):
 
