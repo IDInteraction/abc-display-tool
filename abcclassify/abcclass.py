@@ -135,15 +135,15 @@ class videogroundtruth(groundtruthsource):
         if frame not in self.groundtruth.index:
             raise ValueError("Trying to clear groundtruth for frame %d when not set" % frame)
         self.groundtruth.drop(frame, inplace=True)
-        print "co"
-        print self.classifcationorder
         self.classifcationorder.remove(frame)
 
-    def getgroundtruth(self, frame):
+    def getgroundtruth(self, frame, noninteractive = False):
         """ Get the ground truth for a frame; getting the user to define it if it hasn't already been
         defined """
 
         if frame not in self.groundtruth.index:
+            if noninteractive:
+                raise ValueError("Ground truth for frame %d not set and running in non interactive mode" % frame)
             # Show the frame and get the user to classify it
             cv2.namedWindow(self.windowname)
 

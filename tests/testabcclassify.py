@@ -220,18 +220,17 @@ class videotrackingTests(unittest.TestCase):
         testgt.setgroundtruth(1,1)
         testgt.setgroundtruth(2,0)
 
+        self.assertRaises(ValueError, testgt.getgroundtruth,4, noninteractive=True) # Not set
         self.assertRaises(ValueError, testgt.setgroundtruth,1,1) # Already set
 
         self.assertEquals(testgt.getgroundtruth(1), 1)
         self.assertEqual(testgt.getgroundtruth(2), 0) 
 
         testgt.cleargroundtruth(1)
-
+        self.assertRaises(ValueError, testgt.getgroundtruth,1, noninteractive=True)
         self.assertEqual(testgt.getgroundtruth(2), 0) 
 
         self.assertRaises(ValueError, testgt.cleargroundtruth,1) # Already cleared
-
-
 
         
 
