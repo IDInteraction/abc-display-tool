@@ -137,6 +137,15 @@ class videogroundtruth(groundtruthsource):
         self.groundtruth.drop(frame, inplace=True)
         self.classifcationorder.remove(frame)
 
+    def undolastclassification(self):
+        
+        if len(self.classifcationorder) < 1:
+            print "No frames classified to undo"
+            return
+        lastframe = self.classifcationorder[-1]
+        self.cleargroundtruth(lastframe)
+        self.getgroundtruth(lastframe)
+
     def getgroundtruth(self, frame, noninteractive = False):
         """ Get the ground truth for a frame; getting the user to define it if it hasn't already been
         defined """
@@ -150,14 +159,16 @@ class videogroundtruth(groundtruthsource):
             img = videogroundtruth.getVideoFrame(self, frame)
             cv2.imshow(self.windowname, img)
             framechar = 'x'
-            while framechar not in ['0','1']:
+            while framechar not in ['0','1','u']:
                 key = cv2.waitKey(0) & 255 # Mask - see https://codeyarns.com/2015/01/20/how-to-use-opencv-waitkey-in-python/
                 framechar = chr(key)
-
-            framestate = int(chr(key)) # TODO test numeric
-#            self.groundtruth.loc[frame] = framestate
-            self.setgroundtruth(frame, framestate)
-
+                print "Framechar is: %s" % framechar
+                if framechar == 'u': # Undo (and redo) previous classification
+                    self.undolastclassification()
+                    self.getgroundtruth(frame) # And classify the frame we were on
+                else: 
+                    framestate = int(chr(key)) # TODO test numeric
+                    self.setgroundtruth(frame, framestate)
 
         if frame not in self.groundtruth.index:
             raise ValueError("Could not get state for frame %d" % frame)
