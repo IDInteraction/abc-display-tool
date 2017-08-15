@@ -135,6 +135,8 @@ class videotrackingTests(unittest.TestCase):
         self.assertEqual(list(testvid.getUnclassifiedFrames().index), [200] + range(203,210))
         self.assertEqual(list(testvid.getTrackableUnclassifiedFrames().index), [200] + range(204,210))
 
+
+
     def testFittingModel(self):
 
         # Fit a decision tree classifier to the classified frames
@@ -205,6 +207,33 @@ class videotrackingTests(unittest.TestCase):
         self.assertIsNone(testgt.getgroundtruth(1, failmissing = False))
         self.assertEqual(list(testgt.loc[4233:4234]["state"]), [0,1])
 
+    def testSettingVideoGroundTruth(self):
+        """ Test we can set and unset ground truth when using video to set it"""
+        """ This just tests the getting and setting methods - we can't do an interactive
+        test with video """
+
+        testvid = abcc.videotracking(framerange=(4080,4090))
+        testvid.setClassificationMethod("sequential")
+
+        testgt = abcc.videogroundtruth("./testfiles/testvid.mp4")
+        
+        testgt.setgroundtruth(1,1)
+        testgt.setgroundtruth(2,0)
+
+        self.assertRaises(ValueError, testgt.setgroundtruth,1,1) # Already set
+
+        self.assertEquals(testgt.getgroundtruth(1), 1)
+        self.assertEqual(testgt.getgroundtruth(2), 0) 
+
+        testgt.cleargroundtruth(1)
+
+        self.assertEqual(testgt.getgroundtruth(2), 0) 
+
+        self.assertRaises(ValueError, testgt.cleargroundtruth,1) # Already cleared
+
+
+
+        
 
     def testSplittingAndJoiningObject(self):
         testvid = abcc.videotracking(framerange=(1,25))

@@ -84,6 +84,7 @@ class videogroundtruth(groundtruthsource):
         self.video = cv2.VideoCapture(source)
         self.groundtruth = pd.DataFrame(columns = ["frame","state"])
         self.groundtruth.set_index("frame", inplace = True)
+        self.classifcationorder = [] # Used to allow undo
 
         self.loc = self.groundtruth.loc
         
@@ -120,6 +121,24 @@ class videogroundtruth(groundtruthsource):
 
         return img
 
+    def setgroundtruth(self, frame, state):
+        """ Set the ground truth for a frame"""
+        if frame in self.groundtruth.index:
+            raise ValueError("Groundtruth already set for frame %d" % frame)
+        newframe = pd.DataFrame({"state": [state]}, index=[frame])
+
+        self.groundtruth = self.groundtruth.append(newframe, ignore_index = False, verify_integrity=True)
+        self.classifcationorder.append(frame)
+
+    def cleargroundtruth(self, frame):
+        """ Clear the ground truth for a frame"""
+        if frame not in self.groundtruth.index:
+            raise ValueError("Trying to clear groundtruth for frame %d when not set" % frame)
+        self.groundtruth.drop(frame, inplace=True)
+        print "co"
+        print self.classifcationorder
+        self.classifcationorder.remove(frame)
+
     def getgroundtruth(self, frame):
         """ Get the ground truth for a frame; getting the user to define it if it hasn't already been
         defined """
@@ -136,7 +155,8 @@ class videogroundtruth(groundtruthsource):
                 framechar = chr(key)
 
             framestate = int(chr(key)) # TODO test numeric
-            self.groundtruth.loc[frame] = framestate
+#            self.groundtruth.loc[frame] = framestate
+            self.setgroundtruth(frame, framestate)
 
 
         if frame not in self.groundtruth.index:
