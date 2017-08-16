@@ -17,6 +17,17 @@ from sklearn.model_selection import ShuffleSplit
 
 from abc import ABCMeta, abstractmethod
 
+import inspect
+# Used to calculate intermediate statistics from within object
+# From https://stackoverflow.com/questions/14692071/sharing-scope-in-python-between-called-and-calling-functions
+def calling_scope_variable(name):
+    frame = inspect.stack()[1][0]
+    while name not in frame.f_locals:
+        frame = frame.f_back
+        if frame is None:
+            return None
+    return frame.f_locals[name]
+
 def loadExternalGroundTruth(infile, ppt=None, format="checkfile"):
     import os
 
@@ -205,11 +216,19 @@ class videogroundtruth(groundtruthsource):
                 self.undolastclassification()
                 self.getgroundtruth(frame) # And classify the frame we were on
             elif framechar == 'q': 
-                # Quit
-                pass
+                # TODO will want to write up summary stats before quitting
+                quit()
             elif framechar == 's':
                 # Return statistics
-                pass
+                # We need the full participant object to do this, so we use
+                # the inspect module to look at the calling frame
+                # This doesn't seem like the right way to do this
+                participant = calling_scope_variable('participant')
+                vtc = videotrackingclassifier(participant)  # TODO - RANDOM STATE
+                stats = vtc.getClassificationMetrics(None)
+                print stats
+                # Need to classify frame with its state now
+                gt = self.getgroundtruth(frame)
             else: # Classify frame
                 if not chr(key).isdigit():
                     raise ValueError("Unhandled classifiction key pressed")
