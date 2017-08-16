@@ -71,8 +71,13 @@ class groundtruthsource(object):
     
     @abstractmethod
     def __getitem__(self, arg):
-        """ Get classified frames (if neccessary requesting they be classified interactively)"""
+        """ Get classification for frames (if neccessary requesting they be classified interactively)"""
         pass
+
+    @abstractmethod
+    def getpdframes(self, arg):
+        """ Return a pandas dataframe for the specified frames, classifying interactively if required """
+        pass    
 
     @abstractmethod
     def classifiableframes(self):
@@ -82,6 +87,10 @@ class groundtruthsource(object):
     @abstractmethod
     def getframeswithtruth(self):
         """ Return the set of frame numbers that have ground truth"""
+
+    def iterrows(self):
+        """Iterate over the groundtruth data"""
+        return self.getgroundtruth.iterrows()
         
 class videogroundtruth(groundtruthsource):
     """ Ground truth as given by the user by interactively classifying a video """
@@ -100,7 +109,24 @@ class videogroundtruth(groundtruthsource):
         return len(self.groundtruth)
 
     def __getitem__(self, arg):
-       return self.getgroundtruth(frame) 
+        if isinstance(arg, int):
+            return self.getgroundtruth(arg)
+        else:
+            gt = [self.__getitem__(x) for x in arg]
+            return gt
+
+    def getpdframes(self, arg, noninteractive = False):
+        # classify everything in arg, then return pandas dataframe
+        # getgroundtruth will classify interactively by default
+        # and throw an exception if running noninteractively and 
+        # it gets an unclassified frame
+
+
+        for a in arg:
+            self.getgroundtruth(a,noninteractive = noninteractive)
+
+        return self.groundtruth.loc[arg]
+
 
     def getframeswithtruth(self):
         return set(self.groundtruth.index)
@@ -159,9 +185,12 @@ class videogroundtruth(groundtruthsource):
         """ Get the ground truth for a frame; getting the user to define it if it hasn't already been
         defined """
 
+        if not isinstance(frame, int):
+            raise ValueError("getgroundtruth accepts an int")
+
         if frame not in self.groundtruth.index:
             if noninteractive:
-                raise ValueError("Ground truth for frame %d not set and running in non interactive mode" % frame)
+                raise KeyError("Ground truth for frame %d not set and running in non interactive mode" % frame)
             # Show the frame and get the user to classify it
             cv2.namedWindow(self.windowname)
 
@@ -181,6 +210,7 @@ class videogroundtruth(groundtruthsource):
             elif framechar == 's':
                 # Return statistics
                 pass
+            else: # Classify frame
                 if not chr(key).isdigit():
                     raise ValueError("Unhandled classifiction key pressed")
                 framestate = int(chr(key)) 
@@ -197,6 +227,7 @@ class videogroundtruth(groundtruthsource):
         endframe = self.video.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT)
         return endframe
 
+groundtruthsource.register(videogroundtruth)
 
 class externalgroundtruth(groundtruthsource):
     """ Ground truth as defined in an external file """
@@ -221,7 +252,15 @@ class externalgroundtruth(groundtruthsource):
         return len(self.groundtruth)
 
     def __getitem__(self, arg):
-        return self.groundtruth.loc[arg]
+        return list(self.groundtruth.loc[arg]["state"])
+
+    def getpdframes(self, arg, noninteractive=True):
+        pdframe = self.groundtruth.loc[arg]
+        if not isinstance(pdframe, pd.DataFrame):
+            print "getpdframes should return a pandas dataframe. Quitting"
+            quit()
+
+        return pdframe
 
     def classifiableframes(self):
         """ All frames are classified on load for external ground truth"""

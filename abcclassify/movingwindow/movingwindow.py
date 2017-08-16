@@ -19,6 +19,9 @@ def trainRegion(participant, groundtruth):
 
 def calcWindowedAccuracy(participant, windowsize, advancesize, n_splits = 100):
     """Test the xval accuracy of overlapping windows within the object"""
+    if not isinstance(participant, abcc.videotracking):
+        print "calcWindowedAccuracy requires a videotracking object"
+        quit()
     firstframe = min(participant.frames)
     lastframe = max(participant.frames)
 

@@ -226,7 +226,8 @@ if args.targetted is True:
                 batches.append(remainder)
         print "training in the following batches (first at random)" 
         print batches
-        abcc.trainRegion(participant, groundtruth[trainingframes[:batches.pop(0)]])
+        # Train initial region at random
+        abcc.trainRegion(participant, groundtruth.getpdframes(trainingframes[:batches.pop(0)]))
         for bs in batches:
                 batchresults = abcc.calcWindowedAccuracy(participant, args.windowsize, args.advancesize)
                 minstartframe = batchresults["startframe"].iloc[np.nanargmin(batchresults["mean"])]
@@ -246,8 +247,9 @@ if args.targetted is True:
                 # targetted training
                 np.random.shuffle(trainingframes)
                 trainingframes = trainingframes[:bs]
-                traindata = groundtruth[trainingframes]
+                traindata = groundtruth.getpdframes(trainingframes)
                 abcc.trainRegion(participant, traindata)
+                print "Batch trained, %d frames trained so far" % participant.numClassifiedFrames()
 
 else:
         for f in trainingframes[:args.externaltrainingframes]:
@@ -258,7 +260,8 @@ vtc = abcc.videotrackingclassifier(participant)  # TODO - RANDOM STATE
 # If we're classifying from video we can't get groundtruth for unclassified frames,
 # since all the frames with groundtruth are used for classification
 try:
-        unclassifiedframeGT = groundtruth[participant.getTrackableUnclassifiedFrames().index]
+        unclassifiedframeGT = groundtruth.getpdframes(participant.getTrackableUnclassifiedFrames().index,
+                noninteractive = True)
 except KeyError:
         unclassifiedframeGT = None
 
