@@ -68,6 +68,11 @@ class groundtruthsource(object):
     def __len__(self):
         """Return the number of currently classified frames with ground truth"""
         pass
+    
+    @abstractmethod
+    def __getitem__(self, arg):
+        """ Get classified frames (if neccessary requesting they be classified interactively)"""
+        pass
 
     @abstractmethod
     def classifiableframes(self):
@@ -80,6 +85,7 @@ class groundtruthsource(object):
         
 class videogroundtruth(groundtruthsource):
     """ Ground truth as given by the user by interactively classifying a video """
+    controlkeys = ['u', 's', 'q'] ## Keys that make things besides ground truth classification happen
     def __init__(self, source, participant=None):
         self.video = cv2.VideoCapture(source)
         self.groundtruth = pd.DataFrame(columns = ["frame","state"])
@@ -92,6 +98,9 @@ class videogroundtruth(groundtruthsource):
 
     def __len__(self):
         return len(self.groundtruth)
+
+    def __getitem__(self, arg):
+       return self.getgroundtruth(frame) 
 
     def getframeswithtruth(self):
         return set(self.groundtruth.index)
@@ -159,16 +168,23 @@ class videogroundtruth(groundtruthsource):
             img = videogroundtruth.getVideoFrame(self, frame)
             cv2.imshow(self.windowname, img)
             framechar = 'x'
-            while framechar not in ['0','1','u']:
+            while framechar not in (['0','1'] + self.controlkeys):
                 key = cv2.waitKey(0) & 255 # Mask - see https://codeyarns.com/2015/01/20/how-to-use-opencv-waitkey-in-python/
                 framechar = chr(key)
-                print "Framechar is: %s" % framechar
-                if framechar == 'u': # Undo (and redo) previous classification
-                    self.undolastclassification()
-                    self.getgroundtruth(frame) # And classify the frame we were on
-                else: 
-                    framestate = int(chr(key)) # TODO test numeric
-                    self.setgroundtruth(frame, framestate)
+            print "Framechar is: %s" % framechar
+            if framechar == 'u': # Undo (and redo) previous classification
+                self.undolastclassification()
+                self.getgroundtruth(frame) # And classify the frame we were on
+            elif framechar == 'q': 
+                # Quit
+                pass
+            elif framechar == 's':
+                # Return statistics
+                pass
+                if not chr(key).isdigit():
+                    raise ValueError("Unhandled classifiction key pressed")
+                framestate = int(chr(key)) 
+                self.setgroundtruth(frame, framestate)
 
         if frame not in self.groundtruth.index:
             raise ValueError("Could not get state for frame %d" % frame)
@@ -186,7 +202,6 @@ class externalgroundtruth(groundtruthsource):
     """ Ground truth as defined in an external file """
     def __init__(self, source = None, participant = None):
         self.groundtruth = loadExternalGroundTruth(infile = source, ppt = participant)
-        self.loc  = self.groundtruth.loc
 
     def getgroundtruth(self, frame, failmissing = True):
         if frame not in self.groundtruth.index:
@@ -204,6 +219,9 @@ class externalgroundtruth(groundtruthsource):
 
     def __len__(self):
         return len(self.groundtruth)
+
+    def __getitem__(self, arg):
+        return self.groundtruth.loc[arg]
 
     def classifiableframes(self):
         """ All frames are classified on load for external ground truth"""

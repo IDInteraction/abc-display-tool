@@ -205,7 +205,7 @@ class videotrackingTests(unittest.TestCase):
         self.assertEqual(testgt.getgroundtruth(4080), 0 )
         self.assertRaises(ValueError, testgt.getgroundtruth, 1)
         self.assertIsNone(testgt.getgroundtruth(1, failmissing = False))
-        self.assertEqual(list(testgt.loc[4233:4234]["state"]), [0,1])
+        self.assertEqual(list(testgt[4233:4234]["state"]), [0,1])
 
     def testSettingVideoGroundTruth(self):
         """ Test we can set and unset ground truth when using video to set it"""
